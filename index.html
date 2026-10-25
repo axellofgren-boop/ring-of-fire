@@ -332,6 +332,19 @@ textarea.field { resize: vertical; min-height: 64px; }
 .timeline p { margin: 2px 0 0; }
 @media (max-width: 360px) { .night-stats { grid-template-columns: repeat(2, 1fr); } }
 
+/* The Impostor */
+.imp-pass { text-align: center; display: grid; gap: 6px; justify-items: center; background: var(--surface); border: 1.5px solid var(--line); border-radius: 22px; padding: 22px 16px; }
+.imp-secret { text-align: center; display: grid; gap: 6px; justify-items: center; align-content: center; min-height: 200px; background: var(--card); color: var(--ink); border-radius: 22px; padding: 22px 16px; box-shadow: 0 10px 28px rgba(0,0,0,.45); }
+.imp-secret .label, .imp-secret .sub { color: #6b5249; }
+.imp-word { font-family: var(--f-display); font-size: clamp(2.2rem, 12vw, 3.6rem); line-height: 1.05; overflow-wrap: anywhere; }
+.imp-secret.imp .imp-word { color: var(--suit-red); }
+.imp-dots { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.imp-dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+.imp-dots i.on { background: var(--gold); }
+.imp-order { display: flex; flex-wrap: wrap; gap: 6px; counter-reset: c; list-style: none; padding: 0; margin: 0; }
+.imp-order li { counter-increment: c; background: var(--bg); border-radius: 999px; padding: 6px 12px; font-weight: 700; }
+.imp-order li::before { content: counter(c) ". "; color: var(--gold); }
+
 /* ---------- Landscape / TV ----------
    Rotate the phone sideways and mirror it to a TV (AirPlay, Chromecast): the ring fills the left, turn info and powers sit on the right. */
 .g-side, .g-main, .g-extra { display: contents; }
@@ -455,7 +468,7 @@ textarea.field { resize: vertical; min-height: 64px; }
   };
 
   // ---------- State ----------
-  const MINI_GAMES = ["Horse Race", "The Bomb", "The Door"];
+  const MINI_GAMES = ["Horse Race", "The Bomb", "The Door", "The Impostor"];
   let S = {
     screen: "setup",
     mode: "digital",
@@ -684,6 +697,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     if (g.miniIdx % g.miniQueue.length === 0) g.miniQueue = shuffle(g.miniQueue);
     g.race = null;
     g.door = null;
+    g.imp = null;
     clearTimeout(ui.bombTimer); clearInterval(ui.bombTick); ui.bombTimer = ui.bombTick = null;
     g.bomb = null;
     S.screen = "game"; save(); render();
@@ -970,6 +984,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       ${viewDoor(S.game.door)}
       <button class="btn ghost wide" data-act="board">Open scoreboard</button>
     </div>`;
+    if (name === "The Impostor" && S.game.imp) return viewImpostor(S.game.imp);
     const r = S.game.race;
     if (name === "The Bomb" && S.game.bomb) return viewBomb(S.game.bomb);
     if (name === "Horse Race" && r) return `<div class="wrap">
@@ -1014,6 +1029,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     S.game.race = currentMini() === "Horse Race" ? newRace() : null;
     S.game.door = currentMini() === "The Door" ? newDoor() : null;
     S.game.bomb = currentMini() === "The Bomb" ? newBomb() : null;
+    S.game.imp = currentMini() === "The Impostor" ? newImpostor() : null;
   }
   function raceWinners(r) { return S.game.order.filter(pid => r.bets[pid].suit === r.winner); }
   function raceLosers(r) { return S.game.order.filter(pid => r.bets[pid].suit != null && r.bets[pid].suit !== r.winner); }
@@ -1342,6 +1358,122 @@ textarea.field { resize: vertical; min-height: 64px; }
       </section>${next}`;
   }
 
+  // ---------- The Impostor ----------
+  // Everyone gets the same secret word except one Impostor, who only sees the category. The phone goes round in setup order
+  // for a private peek, then everyone gives a one-word clue and the table votes. Caught Impostors get one guess at the word.
+  const IMP_WORDS = {
+    "Food": ["Pizza", "Sushi", "Taco", "Pancake", "Popcorn", "Burger", "Spaghetti", "Chocolate", "Banana", "Cheese", "Ice cream", "Hot dog", "Meatballs", "Kebab"],
+    "Drinks": ["Beer", "Champagne", "Tequila", "Coffee", "Mojito", "Red wine", "Gin and tonic", "Milkshake", "Jägermeister", "Energy drink"],
+    "Places": ["Beach", "Airport", "Hospital", "Casino", "Gym", "Library", "Nightclub", "Prison", "Church", "Zoo", "Sauna", "IKEA", "Ski resort"],
+    "Animals": ["Penguin", "Giraffe", "Shark", "Kangaroo", "Octopus", "Elephant", "Moose", "Flamingo", "Snake", "Sloth", "Seagull"],
+    "Jobs": ["Pilot", "Dentist", "Firefighter", "Chef", "Teacher", "Police officer", "Bartender", "DJ", "Astronaut", "Plumber"],
+    "Things": ["Umbrella", "Toothbrush", "Guitar", "Candle", "Mirror", "Backpack", "Scissors", "Pillow", "Sunglasses", "Lighter", "Remote control"],
+    "Sports": ["Football", "Golf", "Boxing", "Tennis", "Skiing", "Bowling", "Surfing", "Darts", "Ice hockey", "Beer pong"],
+    "Party": ["Hangover", "Karaoke", "Birthday", "Wedding", "Taxi", "Bouncer", "Selfie", "Shot glass", "Dance floor", "Pregame"],
+    "Movies & TV": ["Titanic", "Harry Potter", "Shrek", "Star Wars", "James Bond", "Batman", "Friends", "The Lion King", "Squid Game"]
+  };
+  const IMP_SIPS = 3; // each civilian, when the Impostor wins
+  function newImpostor() {
+    const g = S.game, all = [];
+    Object.entries(IMP_WORDS).forEach(([cat, ws]) => ws.forEach(w => all.push([cat, w])));
+    // No repeats within a night until the list runs out.
+    if (!g.impUsed) g.impUsed = [];
+    let pool = all.filter(x => !g.impUsed.includes(x[1]));
+    if (!pool.length) { g.impUsed = []; pool = all; }
+    const [cat, word] = pool[Math.floor(Math.random() * pool.length)];
+    g.impUsed.push(word);
+    const imp = g.order[Math.floor(Math.random() * g.order.length)];
+    // A civilian always gives the first clue, so the Impostor has something to go on.
+    const civs = g.order.filter(pid => pid !== imp);
+    const first = civs.length ? g.order.indexOf(civs[Math.floor(Math.random() * civs.length)]) : 0;
+    return { phase: "intro", cat, word, imp, first, seat: 0, show: false, accused: null, caught: false, guessed: false, win: null };
+  }
+  function impostorEnd(m, win) {
+    const g = S.game, logFrom = g.log.length;
+    m.win = win; m.phase = "result";
+    ev("impostor", { pid: m.imp, win, caught: m.caught, guessed: m.guessed, accused: m.accused, word: m.word });
+    if (win) g.order.filter(pid => pid !== m.imp).forEach(pid => logDrink(pid, "sip", IMP_SIPS, "The Impostor: " + player(m.imp).name + " won"));
+    else logDrink(m.imp, "shot", 1, "The Impostor: caught");
+    setTimeout(() => toastSince(logFrom), 900);
+    SFX.play(win ? "lose" : "win");
+    if (!win) setTimeout(confetti, 200);
+  }
+  function impostorAct(act, el) {
+    const m = S.game.imp, n = S.game.order.length;
+    if (!m) return;
+    if (act === "im-start" && m.phase === "intro") { m.phase = "roles"; m.seat = 0; m.show = false; SFX.play("tap"); }
+    if (act === "im-show" && m.phase === "roles") { m.show = true; SFX.play("flip"); buzz(30); }
+    if (act === "im-hide" && m.phase === "roles" && m.show) {
+      m.show = false; m.seat += 1;
+      if (m.seat >= n) { m.phase = "clues"; SFX.play("whistle"); } else SFX.play("tap");
+    }
+    if (act === "im-vote" && m.phase === "clues") { m.phase = "vote"; SFX.play("whistle"); }
+    if (act === "im-accuse" && m.phase === "vote") { m.accused = m.accused === el.dataset.id ? null : el.dataset.id; SFX.play("tap"); }
+    if (act === "im-reveal" && m.phase === "vote" && m.accused) {
+      m.caught = m.accused === m.imp;
+      if (m.caught) { m.phase = "guess"; SFX.play("crown"); } else impostorEnd(m, true);
+    }
+    if (act === "im-guess" && m.phase === "guess") { m.guessed = el.dataset.k === "1"; impostorEnd(m, m.guessed); }
+    if (act === "im-again" && m.phase === "result") { S.game.imp = newImpostor(); S.game.imp.phase = "roles"; SFX.play("whistle"); }
+  }
+  function viewImpostor(m) {
+    const g = S.game, nm = id => esc(player(id).name), n = g.order.length;
+    const hero = (title, sub) => `<div class="mini-hero" style="padding-top:8px;gap:4px"><span class="label">Mini-game · after card ${g.mode === "digital" ? 52 - cardsLeft() : g.turn}</span><h1>${title}</h1>${sub ? `<p class="muted" style="margin:0;max-width:36ch">${sub}</p>` : ""}</div>`;
+    const board = `<button class="btn ghost wide" data-act="board">Open scoreboard</button>`;
+    let body = "";
+    if (m.phase === "intro") {
+      body = hero("The Impostor") + (n < 3
+        ? `<div class="callout">The Impostor needs at least 3 players.</div>
+           <button class="btn fire wide" data-act="mini-done" style="min-height:56px">Back to the ring</button>`
+        : `<div class="callout">Everyone gets the same <b>secret word</b>, except one <b>Impostor</b> who only sees the category. Pass the phone round and peek at your role in secret. Then give one-word clues and vote out the Impostor.</div>
+           <div class="callout"><b>Impostor caught:</b> they take a shot, unless they can guess the word.<br><b>Impostor gets away:</b> everyone else drinks ${IMP_SIPS}.</div>
+           <button class="btn fire wide" data-act="im-start" style="min-height:56px">Hand out the roles</button>
+           <button class="btn ghost wide" data-act="mini-done">Skip The Impostor</button>`) + board;
+    } else if (m.phase === "roles") {
+      const who = g.order[m.seat], next = g.order[m.seat + 1];
+      const dots = `<div class="imp-dots" aria-label="Role ${m.seat + 1} of ${n}">${g.order.map((_, i) => `<i class="${i < m.seat ? "on" : ""}"></i>`).join("")}</div>`;
+      body = m.show
+        ? `${dots}<div class="imp-secret ${who === m.imp ? "imp" : ""}">
+             <span class="label">${who === m.imp ? "You are" : "Secret word"}</span>
+             <div class="imp-word">${who === m.imp ? "The Impostor" : esc(m.word)}</div>
+             <span class="sub">${who === m.imp ? `Category: <b>${esc(m.cat)}</b>. Bluff your clue and blend in.` : `Category: ${esc(m.cat)}`}</span>
+           </div>
+           <button class="btn primary wide" data-act="im-hide" style="min-height:56px">Hide it${next ? ` · pass to ${nm(next)}` : ""}</button>`
+        : `${hero("The Impostor")}${dots}<div class="imp-pass">
+             <span class="label">Pass the phone to</span>
+             <div class="holder">${nm(who)}</div>
+             <span class="muted">Everyone else, look away</span>
+           </div>
+           <button class="btn fire wide" data-act="im-show" style="min-height:56px">I'm ${nm(who)}, show me</button>`;
+      return `<div class="wrap">${body}</div>`;
+    } else if (m.phase === "clues") {
+      const order = g.order.map((_, i) => g.order[(m.first + i) % n]);
+      body = hero("Clue time", "One word each. Too obvious and the Impostor learns the word. Too vague and you look guilty.") + `
+        <section class="panel"><span class="label">Clue order · category ${esc(m.cat)}</span><ol class="imp-order">${order.map(pid => `<li>${nm(pid)}</li>`).join("")}</ol></section>
+        <button class="btn fire wide" data-act="im-vote" style="min-height:56px">Clues done, vote</button>` + board;
+    } else if (m.phase === "vote") {
+      const chips = g.order.map(pid => `<button class="chip" data-act="im-accuse" data-id="${pid}" aria-pressed="${m.accused === pid}">${nm(pid)}</button>`).join("")
+        + `<button class="chip" data-act="im-accuse" data-id="none" aria-pressed="${m.accused === "none"}">Tie, nobody</button>`;
+      body = hero("Who's the Impostor?", "Argue it out, then everyone points on three.") + `
+        <section class="panel"><span class="label">Most votes</span><div class="chips">${chips}</div></section>
+        <button class="btn fire wide" data-act="im-reveal" style="min-height:56px" ${m.accused ? "" : "disabled"}>${!m.accused ? "Tap who got the most votes" : m.accused === "none" ? "Reveal" : `Reveal ${nm(m.accused)}`}</button>` + board;
+    } else if (m.phase === "guess") {
+      body = `<div class="bomb-stage" style="padding-top:18px"><span class="label">Caught!</span><div class="holder">${nm(m.imp)}</div><div class="verdict good">is the Impostor</div></div>
+        <section class="panel"><h2>Last chance</h2><span class="muted">${nm(m.imp)}, say your guess for the secret word out loud. Did they get it?</span>
+          <div class="victims"><button class="btn" data-act="im-guess" data-k="1">Guessed it</button><button class="btn" data-act="im-guess" data-k="0">Wrong</button></div>
+        </section>`;
+    } else {
+      const why = !m.caught ? (m.accused === "none" ? "The vote tied, so the Impostor stayed hidden." : `${nm(m.accused)} was innocent. ${nm(m.imp)} stayed hidden.`)
+        : m.guessed ? `${nm(m.imp)} was caught but guessed the word.` : `${nm(m.imp)} was caught and missed the word.`;
+      body = `<div class="verdict ${m.win ? "bad" : "good"}" style="font-size:1.7rem;padding-top:12px">${m.win ? "The Impostor wins!" : "Civilians win!"}</div>
+        <div class="imp-secret" style="min-height:0"><span class="label">The Impostor was</span><div class="imp-word" style="font-size:clamp(1.8rem, 9vw, 2.6rem)">${nm(m.imp)}</div><span class="sub">The word was <b>${esc(m.word)}</b></span></div>
+        <div class="callout" style="text-align:center">${why} ${m.win ? `Everyone else drinks ${IMP_SIPS}.` : `${nm(m.imp)} takes a shot.`}</div>
+        <button class="btn primary wide" data-act="im-again">Play another round</button>
+        <button class="btn fire wide" data-act="mini-done" style="min-height:56px">Back to the ring</button>` + board;
+    }
+    return `<div class="wrap">${body}</div>`;
+  }
+
   function computeAwards() {
     const g = S.game, evs = g.events || [], order = g.order;
     const count = (type, key, filter) => { const m = {}; evs.filter(e => e.type === type && (!filter || filter(e))).forEach(e => { const k = e[key || "pid"]; m[k] = (m[k] || 0) + 1; }); return m; };
@@ -1375,6 +1507,9 @@ textarea.field { resize: vertical; min-height: 64px; }
     add("Bomb Magnet", "Blew up holding The Bomb the most", tops(count("bomb")), v => pl(v, "explosion"));
     add("Door Master", "Last one standing at The Door", tops(count("door")), v => pl(v, "win"));
     add("Shown the Door", "Picked to finish their drink at The Door", tops(count("door", "victim")), v => pl(v, "time"));
+    add("Master of Disguise", "Won the most rounds as The Impostor", tops(count("impostor", "pid", e => e.win)), v => pl(v, "win"));
+    add("Busted", "Caught the most as The Impostor", tops(count("impostor", "pid", e => !e.win)), v => pl(v, "time"));
+    add("Wrongly Accused", "Voted out as The Impostor while innocent", tops(count("impostor", "accused", e => !e.caught && e.accused !== "none")), v => pl(v, "time"));
     add("Lucky Punter", "Backed the most winning horses", tops(wins), v => pl(v, "win"));
     add("Waterfall Starter", "Drew the most Aces", tops(count("card", "pid", e => e.rank === "A")), v => pl(v, "Ace"));
     return out;
@@ -1383,7 +1518,7 @@ textarea.field { resize: vertical; min-height: 64px; }
   function timeline() {
     const g = S.game, evs = (g.events || []).slice();
     // Shots and finished drinks are highlights too.
-    g.log.filter(e => e.kind !== "sip" && !e.reason.startsWith("Mate of") && !e.reason.startsWith("The Door:") && e.reason !== "The Bomb").forEach(e => evs.push({ type: "big", pid: e.pid, kind: e.kind, reason: e.reason, t: e.t, card: e.card }));
+    g.log.filter(e => e.kind !== "sip" && !e.reason.startsWith("Mate of") && !e.reason.startsWith("The Door:") && !e.reason.startsWith("The Impostor:") && e.reason !== "The Bomb").forEach(e => evs.push({ type: "big", pid: e.pid, kind: e.kind, reason: e.reason, t: e.t, card: e.card }));
     evs.sort((x, y) => x.t - y.t);
     const nm = id => `<b>${esc(player(id).name)}</b>`;
     const clock = t => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -1401,6 +1536,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       if (e.type === "race") { txt = `${SUIT_NAMES[e.suit]} won the Horse Race` + (e.winners.length ? `. Winners: ${e.winners.map(nm).join(", ")}` : ". Nobody backed it"); tag = "Horse Race"; }
       if (e.type === "half") { txt = `Halftime: ${e.pids.map(nm).join(" & ")} came last and ${nm(e.judge)} handed out ${esc(e.what)}`; tag = "Halftime"; }
       if (e.type === "door") { txt = `${nm(e.pid)} survived The Door and made ${nm(e.victim)} finish their drink`; tag = "The Door"; }
+      if (e.type === "impostor") { txt = !e.caught ? `${nm(e.pid)} was The Impostor and got away with it (word: “${esc(e.word)}”)` : e.guessed ? `${nm(e.pid)} was caught as The Impostor but guessed “${esc(e.word)}”` : `${nm(e.pid)} was caught as The Impostor (word: “${esc(e.word)}”)`; tag = "The Impostor"; }
       if (e.type === "big") { txt = `${nm(e.pid)} ${e.kind === "shot" ? "took a shot" : "finished a drink"}` + (e.reason !== "Manual" ? ` (${esc(e.reason)})` : ""); tag = e.kind === "shot" ? "Shot" : "Finished"; }
       if (txt) lines.push(`<li><span class="tl-time">${e.card ? "Card " + e.card : clock(e.t)}</span><div><span class="tl-tag">${esc(tag)}</span><p>${txt}</p></div></li>`);
     });
@@ -1445,7 +1581,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     const xs = N <= 13 ? [0, N] : [0, 13, 26, 39, 52].filter(k => k < N).concat([N]);
     [...new Set(xs)].forEach(k => { xt += `<text x="${X(k)}" y="${H - 6}" text-anchor="middle">${k === 0 ? "Start" : "Card " + k}</text>`; });
     // Mini-game breaks as faint dashed lines, labelled once at the top.
-    const MG = { race: "Horse Race", bomb: "The Bomb", door: "The Door" };
+    const MG = { race: "Horse Race", bomb: "The Bomb", door: "The Door", impostor: "Impostor" };
     let mg = "";
     (g.events || []).filter(e => MG[e.type]).forEach(e => {
       const x = X(Math.min(N, e.card || 0));
@@ -1785,7 +1921,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       case "coup": SFX.play("crown"); confetti(); ev("crown", { pid: sh.who, from: g.dictator, via: "coup" }); g.dictator = sh.who; ui.sheet = null; break;
       case "pay": { const n0 = g.log.length; logDrink(sh.who, el.dataset.k, 1, "Failed Dictator challenge"); ui.sheet = null; toastSince(n0); break; }
       case "mini-done": finishMini(); return;
-      default: if (act.startsWith("hr-")) raceAct(act, el); else if (act.startsWith("bm-")) bombAct(act, el); else if (act.startsWith("dr-")) doorAct(act, el); break;
+      default: if (act.startsWith("hr-")) raceAct(act, el); else if (act.startsWith("bm-")) bombAct(act, el); else if (act.startsWith("dr-")) doorAct(act, el); else if (act.startsWith("im-")) impostorAct(act, el); break;
       case "again": { S.screen = "setup"; startGame(); return; }
       case "setup": S.screen = "setup"; S.game = null; break;
     }

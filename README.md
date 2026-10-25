@@ -1,6 +1,6 @@
 # Ring of Fire 🔥
 
-A party drinking game for the crew, with house rules, mini-games (Horse Race, The Bomb, The Door) and a game-over screen with stats and awards.
+A party drinking game for the crew, with house rules, mini-games (Horse Race, The Bomb, The Door, The Impostor) and a game-over screen with stats and awards.
 
 **Play it here:** https://axellofgren-boop.github.io/ring-of-fire/
 

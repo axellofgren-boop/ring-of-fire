@@ -403,6 +403,18 @@ textarea.field { resize: vertical; min-height: 64px; }
   animation: toast 2.2s ease forwards;
 }
 @keyframes toast { 0% { opacity: 0; transform: translateY(12px); } 10%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+.mate-pop {
+  position: fixed; left: 16px; right: 16px; margin: 0 auto; width: fit-content; max-width: 560px; z-index: 41;
+  top: max(14px, env(safe-area-inset-top, 0px));
+  display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-radius: 20px;
+  background: linear-gradient(135deg, var(--gold), #ff6a2b); color: #2a0a06; font-weight: 800; font-size: 1.08rem; line-height: 1.3;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.18), 0 12px 32px rgba(0,0,0,.55); cursor: pointer;
+  animation: matepop 4.2s cubic-bezier(.2,.8,.2,1.2) forwards;
+}
+.mate-pop .mp-ico { font-size: 2rem; }
+.mate-pop .mp-line { display: flex; align-items: center; gap: 10px; }
+.mate-pop .mp-n { flex: none; padding: 1px 8px; border-radius: 999px; background: rgba(42,10,6,.85); color: var(--gold); font-size: .9rem; white-space: nowrap; }
+@keyframes matepop { 0% { opacity: 0; transform: translateY(-24px) scale(.9); } 8% { opacity: 1; transform: none; } 12% { transform: scale(1.04); } 16%, 88% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-12px); } }
 .confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
 
 /* Night chart */
@@ -468,7 +480,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     "5": { name: "Give or drink 5", text: "Red suit: choose someone to drink 5 sips. Black suit: you drink 5 sips.", action: "suit", sips: 5 },
     "6": { name: "Thumb Master", text: "Once, whenever you like, put your thumb on the table. Everyone must follow, and the last one drinks. Then your power is used up.", action: "role", sips: 2, once: true },
     "7": { name: "Heaven", text: "Point your finger at the sky. Whoever is last must drink.", action: "pick", sips: 2 },
-    "8": { name: "Mate", text: "Choose a drinking buddy. They drink every time you drink, for the rest of the game.", action: "mate", sips: 0 },
+    "8": { name: "Mate", text: "Choose a drinking mate. Whenever one of you drinks, the other drinks too, for the rest of the game.", action: "mate", sips: 0 },
     "9": { name: "Rhyme", text: "Say a word, like fog. The next person rhymes it (dog) and it goes round the circle until someone messes up and drinks.", action: "pick", sips: 2 },
     "10": { name: "Categories", text: "Pick a category, like football. Go round the circle naming things in it. Whoever messes up drinks.", action: "pick", sips: 2 },
     J: { name: "Make a Rule", text: "Make up a rule everyone must follow for the whole game, you included. Like: only drink with your left hand. Break it and you drink.", action: "makerule", sips: 1 },
@@ -520,14 +532,17 @@ textarea.field { resize: vertical; min-height: 64px; }
   function cur() { const g = S.game; return g.order[g.cur]; }
 
   // ---------- Drinks ----------
-  // A mate drinks whenever the person who chose them drinks (and their own mate follows, without looping).
+  // Mates go both ways: when either one drinks, the other drinks too (chains follow on, without looping).
+  function matesOf(pid) {
+    const m = S.game.mates || {};
+    return [...new Set([m[pid], ...Object.keys(m).filter(a => m[a] === pid)].filter(Boolean))];
+  }
   function logDrink(pid, kind, n, reason, seen) {
     if (!n) return;
     const g = S.game;
     g.log.push({ pid, kind, n, reason, t: Date.now(), card: cardNow() });
     seen = seen || new Set([pid]);
-    const mate = (g.mates || {})[pid];
-    if (mate && !seen.has(mate)) { seen.add(mate); logDrink(mate, kind, n, "Mate of " + player(pid).name, seen); }
+    matesOf(pid).forEach(mate => { if (!seen.has(mate)) { seen.add(mate); logDrink(mate, kind, n, "Mate of " + player(pid).name, seen); } });
   }
   function totals(pid) {
     const t = { sip: 0, shot: 0, finish: 0 };
@@ -800,6 +815,19 @@ textarea.field { resize: vertical; min-height: 64px; }
     const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = msg;
     document.body.appendChild(t); setTimeout(() => t.remove(), 2300);
   }
+  // Big reminder when a mate has to drink along: "Bob, drink with your mate Ann!"
+  function matePop(es) {
+    const old = document.querySelector(".mate-pop"); if (old) old.remove();
+    if (!es.length) return;
+    const amt = e => e.kind === "sip" ? "+" + e.n : e.kind === "shot" ? "shot" : "finish";
+    const lines = es.slice(0, 3).map(e => `<div class="mp-line"><span><b>${esc(player(e.pid).name)}</b>, drink with your mate <b>${esc(e.reason.slice(8))}</b>!</span><span class="mp-n">${amt(e)}</span></div>`);
+    if (es.length > 3) lines.push(`<div class="mp-line">+${es.length - 3} more mates drink too</div>`);
+    const t = document.createElement("div"); t.className = "mate-pop"; t.setAttribute("role", "alert");
+    t.innerHTML = `<span class="mp-ico" aria-hidden="true">🍻</span><div>${lines.join("")}</div>`;
+    t.onclick = () => t.remove();
+    document.body.appendChild(t); setTimeout(() => t.remove(), 4200);
+    buzz([60, 60, 60]);
+  }
   // Summarise drinks logged since a point in the log, e.g. "Player 2 +2 · Player 3 +1".
   function toastSince(from) {
     const g = S.game; if (!g) return;
@@ -807,6 +835,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     const parts = Object.entries(m).map(([pid, v]) => player(pid).name + " " + [v.sip ? "+" + v.sip : "", ...v.big].filter(Boolean).join(" "));
     if (!parts.length) return;
     toast(parts.length > 3 ? `Logged drinks for ${parts.length} players` : parts.join(" · "));
+    matePop(g.log.slice(from).filter(e => e.reason.startsWith("Mate of ")));
     SFX.play(g.log.slice(from).some(e => e.kind !== "sip") ? "shot" : "sip");
   }
 
@@ -958,7 +987,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     (g.houseRules || []).forEach((h, i) =>
       powers.push(bar("House rule", esc(ruleLabel(i)), `<button class="btn small" data-act="penalty" data-k="rule:${i}">Broke it</button>`)));
     const mates = Object.entries(g.mates || {});
-    if (mates.length) powers.push(`<div class="callout" style="font-size:.92rem"><span class="label">Mates</span><br>${mates.map(([a, b]) => `${esc(player(b).name)} drinks with ${esc(player(a).name)}`).join("<br>")}</div>`);
+    if (mates.length) powers.push(`<div class="callout" style="font-size:.92rem"><span class="label">Mates</span><br>${mates.map(([a, b]) => `${esc(player(a).name)} & ${esc(player(b).name)}`).join("<br>")}</div>`);
     const dict = powers.length ? `<div class="stack" style="gap:8px">${powers.join("")}</div>` : "";
     let middle;
     const cards = g.deck.map((c, i) => `<button class="rc ${c.drawn ? "drawn" : ""}" data-act="draw" data-id="${c.id}" data-i="${i}" aria-label="Draw card ${i + 1}" ${c.drawn ? "tabindex='-1'" : ""}></button>`).join("");

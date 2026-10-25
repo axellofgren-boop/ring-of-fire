@@ -361,6 +361,10 @@ textarea.field { resize: vertical; min-height: 64px; }
   .sheet.rv .reveal h2 { font-size: clamp(1.6rem, 6vh, 2.4rem); overflow-wrap: anywhere; }
 }
 
+/* Fullscreen button: hidden once installed to the home screen, where there is no URL bar anyway. */
+.fs-btn svg { width: 20px; height: 20px; }
+@media (display-mode: fullscreen), (display-mode: standalone) { .fs-btn { display: none; } }
+
 /* Party polish */
 .rc::after { content: ""; position: absolute; inset: -5px -3px; }
 .rc.pulling { transition: transform .18s ease-out; z-index: 6; box-shadow: 0 0 0 2px var(--gold), 0 10px 24px rgba(255,106,43,.55); }
@@ -790,6 +794,35 @@ textarea.field { resize: vertical; min-height: 64px; }
     });
   }
 
+  // ---------- Fullscreen ----------
+  // Hides the browser's URL bar and turns the phone sideways for the TV. iPhone Safari has no fullscreen for pages, so it gets install steps instead.
+  const APP_URL = "https://axellofgren-boop.github.io/ring-of-fire/";
+  function fsActive() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  async function toggleFullscreen() {
+    const d = document.documentElement;
+    if (fsActive()) {
+      try { screen.orientation.unlock(); } catch (e) {}
+      try { await (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) {}
+      return;
+    }
+    const req = d.requestFullscreen || d.webkitRequestFullscreen;
+    const ok = req && (document.fullscreenEnabled || document.webkitFullscreenEnabled);
+    if (!ok) { ui.sheet = { type: "fs-help" }; render(); return; }
+    try { await req.call(d, { navigationUI: "hide" }); } catch (e) { ui.sheet = { type: "fs-help" }; render(); return; }
+    try { await screen.orientation.lock("landscape"); } catch (e) {}
+  }
+  ["fullscreenchange", "webkitfullscreenchange"].forEach(n => document.addEventListener(n, () => { if (S.screen === "game") render(); }));
+  function sheetFsHelp() {
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const steps = ios
+      ? `<p style="margin:0">Safari on iPhone can't hide the address bar for a web page. Install the game instead and it opens full screen from its own icon, offline too.</p>
+        <ol style="margin:0;padding-left:1.2em;display:grid;gap:4px"><li>Open <b>${APP_URL.replace("https://", "")}</b> in Safari</li><li>Tap <b>Share</b>, then <b>Add to Home Screen</b></li><li>Start the game from the new icon and turn the phone sideways</li></ol>`
+      : `<p style="margin:0">This browser won't go fullscreen here. Open the app version, then tap ⋮ and <b>Add to Home screen</b> for a fullscreen icon that works offline.</p>`;
+    return `<div class="sheet-head"><h2>Play fullscreen</h2><button class="iconbtn" data-act="close" aria-label="Close">&times;</button></div>
+      ${steps}
+      <a class="btn primary wide" href="${APP_URL}" target="_blank" rel="noopener" style="text-decoration:none">Open the app version</a>`;
+  }
+
   // ---------- Wake lock ----------
   let lock = null;
   async function wakeLock() {
@@ -927,6 +960,7 @@ textarea.field { resize: vertical; min-height: 64px; }
           ${untilMini !== null ? `<div class="stat"><span class="label">Mini-game</span><b>${untilMini}</b></div>` : ""}
         </div>
         <div class="row" style="gap:6px;flex-wrap:nowrap">
+          <button class="iconbtn fs-btn" data-act="fs" aria-label="${fsActive() ? "Exit fullscreen" : "Fullscreen, landscape"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${fsActive() ? '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>' : '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'}</svg></button>
           <button class="iconbtn cog" data-act="menu" aria-label="Scores, rules and settings">&#9881;&#65038;</button>
         </div>
       </div>
@@ -1530,6 +1564,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     if (sh.type === "reveal") inner = sheetReveal(sh);
     if (sh.type === "challenge") inner = sheetChallenge(sh);
     if (sh.type === "menu") inner = sheetMenu(sh);
+    if (sh.type === "fs-help") inner = sheetFsHelp();
     if (sh.type === "penalty") inner = sheetPenalty(sh);
     const fresh = ui.lastSheet !== sh; ui.lastSheet = sh; // only animate when a sheet first opens
     return `<div class="scrim${fresh ? " anim" : ""}" data-act="${sh.type === "reveal" ? "" : "close"}"><div class="sheet${sh.type === "reveal" ? " rv" : ""}" role="dialog" aria-modal="true">${inner}</div></div>`;
@@ -1739,6 +1774,7 @@ textarea.field { resize: vertical; min-height: 64px; }
         return;
       }
       case "sound": SFX.toggle(); break;
+      case "fs": toggleFullscreen(); return;
       case "half-pick": g.half.pick = el.dataset.k; break;
       case "half-ok": punishLast(); return;
       case "half-skip": finishHalf(); return;

@@ -185,6 +185,13 @@ textarea.field { resize: vertical; min-height: 64px; }
 .reveal h2 { font-size: clamp(1.9rem, 8vw, 2.6rem); line-height: 1.05; color: var(--gold); }
 .reveal p { margin: 0; max-width: 40ch; color: var(--muted); }
 .rv-act { display: grid; gap: 12px; align-content: start; }
+/* A card with choices to make shows smaller, so the buttons fit without scrolling. */
+.sheet.rv.busy .face { height: min(26dvh, 210px); }
+/* Fold-away sections: a button that shows or hides what sits under it. */
+.fold { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 0 18px; gap: 10px; text-align: left; }
+.fold .caret { opacity: .7; transition: transform .2s; }
+.fold[aria-expanded="true"] .caret { transform: rotate(180deg); }
+.tabs.end-tabs { grid-template-columns: repeat(4, 1fr); }
 .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: var(--bg); border-radius: 14px; padding: 4px; }
 .tabs button { border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-weight: 800; min-height: 42px; }
 .tabs button[aria-pressed="true"] { background: var(--surface-2); color: var(--fg); }
@@ -370,6 +377,11 @@ textarea.field { resize: vertical; min-height: 64px; }
   .sheet.rv .reveal { width: calc(min(62dvh, 440px) * 5 / 7); }
   .sheet.rv .reveal .face { height: min(62dvh, 440px); max-width: none; }
   .sheet.rv .reveal h2 { font-size: clamp(1.6rem, 6vh, 2.4rem); overflow-wrap: anywhere; }
+  .sheet.rv.busy .reveal { width: calc(min(46dvh, 320px) * 5 / 7); }
+  .sheet.rv.busy .reveal .face { height: min(46dvh, 320px); }
+  .sheet.rv.busy .rv-act { gap: 8px; }
+  .sheet.rv.busy .alloc-row { padding-block: 3px; }
+  .sheet.rv.busy .alloc-row .iconbtn { width: 38px; height: 38px; }
 }
 
 /* The ring centre shows just the count, so it can be big. */
@@ -476,7 +488,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     miniGames: MINI_GAMES.slice(),
     game: null
   };
-  let ui = { sheet: null }; // transient sheet state, not persisted
+  let ui = { sheet: null, fold: {}, endTab: "awards" }; // transient sheet state, not persisted
 
   function uid() { return Math.random().toString(36).slice(2, 9); }
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
@@ -571,6 +583,11 @@ textarea.field { resize: vertical; min-height: 64px; }
   function cardNow() { const g = S.game; return g.solo ? g.round : 52 - cardsLeft(); }
   function unit() { return S.game && S.game.solo ? "Round" : "Card"; }
   function miniTag() { return S.game.solo ? `Round ${S.game.round}` : `Mini-game · after card ${cardNow()}`; }
+  // A button that folds a section away until someone taps it open.
+  function fold(k, label, body) {
+    const open = !!(ui.fold && ui.fold[k]);
+    return `<button class="btn ghost fold" data-act="fold" data-k="${k}" aria-expanded="${open}"><span>${label}</span><span class="caret">&#9662;</span></button>${open ? body : ""}`;
+  }
   function soloOne() { return !!S.game.solo && S.game.solo.length === 1; }
   function backTxt() { return S.game.solo ? "Next round" : "Back to the ring"; }
   function exitGame() { clearBomb(); S.game = null; S.screen = "setup"; ui.sheet = null; }
@@ -635,6 +652,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     g.events.push(Object.assign({ type, card: cardNow(), t: Date.now() }, data));
   }
   function endGame() {
+    ui.endTab = "awards";
     if (!S.game.endedAt) { S.game.endedAt = Date.now(); SFX.play("win"); setTimeout(confetti, 200); }
     S.screen = "end";
   }
@@ -890,14 +908,13 @@ textarea.field { resize: vertical; min-height: 64px; }
         <span class="muted" style="font-size:.9rem">No cards, just mini-games. Tick one or more and they take turns in a random order.</span>
         <div class="modes">${soloBtns}</div>
         <button class="btn ghost" data-act="mode">Back to Ring of Fire</button>
-      </section>` : `<section class="panel">
-        <h2>House rules</h2>
+      </section>` : fold("house", "House rules &amp; mini-games", `<section class="panel">
         <label class="stack" for="freq"><span class="label">Mini-game</span>
           <select class="field" id="freq">${freqOpts}</select>
         </label>
         <span class="muted" style="font-size:.9rem">Mini-games in the mix: ${S.miniGames.map(esc).join(", ")}. More coming.</span>
         <button class="btn ghost" data-act="rules">Edit card rules</button>
-      </section>`}
+      </section>`)}
       <button class="btn fire wide" data-act="start" ${can ? "" : "disabled"} style="font-size:1.1rem;min-height:56px">${!solo ? "Start the fire" : !pick.length ? "Tick a mini-game" : pick.length === 1 ? "Play " + esc(pick[0]) : `Play ${pick.length} mini-games`}</button>
       ${enough ? "" : `<span class="muted" style="text-align:center">${need === 3 ? "The Impostor needs at least 3 players." : "Add at least 2 players."}</span>`}
       ${solo ? "" : `<button class="btn ghost wide" data-act="minis-open">Just play mini-games</button>`}
@@ -1034,6 +1051,7 @@ textarea.field { resize: vertical; min-height: 64px; }
   }
   function enterMini() {
     SFX.play("whistle");
+    ui.fold.howto = ui.fold.race = false;
     S.screen = "mini";
     S.game.race = currentMini() === "Horse Race" ? newRace() : null;
     S.game.door = currentMini() === "The Door" ? newDoor() : null;
@@ -1119,11 +1137,11 @@ textarea.field { resize: vertical; min-height: 64px; }
           <span class="muted" style="font-size:.9rem">Back a horse and set your bet. Skip a suit to sit this one out.</span>
           <div class="stack">${rows}</div>
         </section>
-        <section class="panel">
+        ${fold("race", `Race options · ${r.len} cards${r.pre ? " · half up front" : ""}`, `<section class="panel">
           <span class="label">Track length</span>
           <div class="chips">${[6, 7, 8].map(n => `<button class="chip" data-act="hr-len" data-k="${n}" aria-pressed="${r.len === n}">${n} cards</button>`).join("")}</div>
           <button class="chip" data-act="hr-pre" aria-pressed="${r.pre}" style="justify-self:start">Drink half your bet before the race</button>
-        </section>
+        </section>`)}
         <button class="btn fire wide" data-act="hr-start" ${any ? "" : "disabled"} style="min-height:56px">${any ? "And they're off!" : "Someone has to bet"}</button>
         ${soloOne() ? "" : `<button class="btn ghost wide" data-act="mini-done">Skip the race</button>`}`;
     }
@@ -1250,7 +1268,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       body = `<div class="mini-hero" style="padding-top:8px;gap:4px">${after}<h1>The Bomb</h1></div>
         <div class="bomb-stage">${bombSvg(false)}</div>
         <div class="bomb-starter"><span class="label">Starts with the bomb</span><div class="holder">${nm(b.starter)}</div></div>
-        <div class="callout">Grab something to be the bomb and pass it around the table. A <b>hidden timer</b> is running, somewhere between 30 seconds and 3 minutes. Whoever is holding it when it goes <b>BOOM</b> takes a shot.</div>
+        ${fold("howto", "How to play", `<div class="callout">Grab something to be the bomb and pass it around the table. A <b>hidden timer</b> is running, somewhere between 30 seconds and 3 minutes. Whoever is holding it when it goes <b>BOOM</b> takes a shot.</div>`)}
         <button class="btn fire wide" data-act="bm-light" style="min-height:56px">Light the fuse</button>
         ${soloOne() ? "" : `<button class="btn ghost wide" data-act="mini-done">Skip The Bomb</button>`}`;
     } else if (b.phase === "live") {
@@ -1434,8 +1452,8 @@ textarea.field { resize: vertical; min-height: 64px; }
       body = hero("The Impostor") + (n < 3
         ? `<div class="callout">The Impostor needs at least 3 players.</div>
            <button class="btn fire wide" data-act="${soloOne() ? "exit" : "mini-done"}" style="min-height:56px">${soloOne() ? "Back to the start" : backTxt()}</button>`
-        : `<div class="callout">Everyone gets the same <b>secret word</b>, except one <b>Impostor</b> who only sees the category. Pass the phone round and peek at your role in secret. Then give one-word clues and vote out the Impostor.</div>
-           <div class="callout"><b>Impostor caught:</b> they take a shot, unless they can guess the word.<br><b>Impostor gets away:</b> everyone else drinks ${IMP_SIPS}, and anyone voted out by mistake takes a shot.</div>
+        : `${fold("howto", "How to play", `<div class="callout">Everyone gets the same <b>secret word</b>, except one <b>Impostor</b> who only sees the category. Pass the phone round and peek at your role in secret. Then give one-word clues and vote out the Impostor.</div>
+           <div class="callout"><b>Impostor caught:</b> they take a shot, unless they can guess the word.<br><b>Impostor gets away:</b> everyone else drinks ${IMP_SIPS}, and anyone voted out by mistake takes a shot.</div>`)}
            <button class="btn fire wide" data-act="im-start" style="min-height:56px">Hand out the roles</button>
            ${soloOne() ? "" : `<button class="btn ghost wide" data-act="mini-done">Skip The Impostor</button>`}`);
     } else if (m.phase === "roles") {
@@ -1682,6 +1700,8 @@ textarea.field { resize: vertical; min-height: 64px; }
   document.addEventListener("pointermove", chartHover);
   document.addEventListener("pointerdown", chartHover);
 
+  // Game over is split into tabs so it fits on one screen.
+  const END_TABS = [["awards", "Awards"], ["chart", "Chart"], ["scores", "Scores"], ["night", "Timeline"]];
   function viewEnd() {
     const g = S.game, b = board();
     const rows = b.map((r, i) => `<div class="brow"><span class="pos">${i + 1}</span><div style="min-width:0"><div class="nm">${esc(r.name)}</div><div class="tot">${fmtTotals(r)}</div></div><span></span></div>`).join("");
@@ -1696,6 +1716,7 @@ textarea.field { resize: vertical; min-height: 64px; }
         <div class="aw-blurb">${esc(a.blurb)}</div>
       </article>`).join("");
     const tl = timeline();
+    const tab = END_TABS.some(t => t[0] === ui.endTab) ? ui.endTab : "awards";
     return `<div class="wrap">
       <div class="mini-hero" style="padding-top:12px">
         <span class="label">${!g.solo ? "The ring is out" : g.solo.length === 1 ? esc(g.solo[0]) + " is over" : "The mini-games are over"}</span>
@@ -1707,12 +1728,11 @@ textarea.field { resize: vertical; min-height: 64px; }
         <div><b>${tot.sip}</b><span class="label">sips</span></div>
         <div><b>${tot.big}</b><span class="label">shots & downs</span></div>
       </div>
-      <section class="stack"><h2>How the night went</h2>${nightChart()}</section>
-      <section class="stack"><h2>Awards</h2><div class="awards ${computeAwards().length % 2 ? "odd" : ""}">${awards}</div></section>
-      <section class="stack"><h2>Final standings</h2><div class="board">${rows}</div></section>
-      <section class="stack"><h2>The night</h2>
-        ${tl.length ? `<ol class="timeline">${tl.join("")}</ol>` : `<p class="muted" style="margin:0">A quiet night. No crowns, mates, rules or shots to report.</p>`}
-      </section>
+      <div class="tabs end-tabs">${END_TABS.map(([k, l]) => `<button data-act="end-tab" data-k="${k}" aria-pressed="${tab === k}">${l}</button>`).join("")}</div>
+      ${tab === "chart" ? `<section class="stack">${nightChart()}</section>`
+        : tab === "scores" ? `<section class="stack"><div class="board">${rows}</div></section>`
+        : tab === "night" ? `<section class="stack">${tl.length ? `<ol class="timeline">${tl.join("")}</ol>` : `<p class="muted" style="margin:0">A quiet night. No crowns, mates, rules or shots to report.</p>`}</section>`
+        : `<section class="stack"><div class="awards ${computeAwards().length % 2 ? "odd" : ""}">${awards}</div></section>`}
       <button class="btn fire wide" data-act="again">Play again, same crew</button>
       <button class="btn ghost wide" data-act="setup">Back to setup</button>
     </div>`;
@@ -1728,7 +1748,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     if (sh.type === "menu") inner = sheetMenu(sh);
     if (sh.type === "penalty") inner = sheetPenalty(sh);
     const fresh = ui.lastSheet !== sh; ui.lastSheet = sh; // only animate when a sheet first opens
-    return `<div class="scrim${fresh ? " anim" : ""}" data-act="${sh.type === "reveal" ? "" : "close"}"><div class="sheet${sh.type === "reveal" ? " rv" : ""}" role="dialog" aria-modal="true">${inner}</div></div>`;
+    return `<div class="scrim${fresh ? " anim" : ""}" data-act="${sh.type === "reveal" ? "" : "close"}"><div class="sheet${sh.type === "reveal" ? " rv" : ""}${sh.type === "reveal" && ["suit", "give", "pick", "mate", "makerule"].includes(effAction(sh)) ? " busy" : ""}" role="dialog" aria-modal="true">${inner}</div></div>`;
   }
 
   function sheetReveal(sh) {
@@ -1972,6 +1992,8 @@ textarea.field { resize: vertical; min-height: 64px; }
       case "end": ui.sheet = null; endGame(); break;
       case "skip-mini": ui.sheet = null; if (g.miniQueue.length) enterMini(); break;
       case "close": ui.sheet = null; break;
+      case "fold": ui.fold[el.dataset.k] = !ui.fold[el.dataset.k]; break;
+      case "end-tab": ui.endTab = el.dataset.k; break;
       case "add-sip": { const n0 = g.log.length; logDrink(id, "sip", 1, "Manual"); toastSince(n0); break; }
       case "add-shot": { const n0 = g.log.length; logDrink(id, "shot", 1, "Manual"); toastSince(n0); break; }
       case "undo": g.log.pop(); break;

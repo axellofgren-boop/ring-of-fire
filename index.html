@@ -1397,6 +1397,8 @@ textarea.field { resize: vertical; min-height: 64px; }
     ev("impostor", { pid: m.imp, win, caught: m.caught, guessed: m.guessed, accused: m.accused, word: m.word });
     if (win) g.order.filter(pid => pid !== m.imp).forEach(pid => logDrink(pid, "sip", IMP_SIPS, "The Impostor: " + player(m.imp).name + " won"));
     else logDrink(m.imp, "shot", 1, "The Impostor: caught");
+    // Voting out an innocent costs them a shot too.
+    if (!m.caught && m.accused !== "none") logDrink(m.accused, "shot", 1, "The Impostor: wrongly accused");
     setTimeout(() => toastSince(logFrom), 900);
     SFX.play(win ? "lose" : "win");
     if (!win) setTimeout(confetti, 200);
@@ -1429,7 +1431,7 @@ textarea.field { resize: vertical; min-height: 64px; }
         ? `<div class="callout">The Impostor needs at least 3 players.</div>
            <button class="btn fire wide" data-act="mini-done" style="min-height:56px">Back to the ring</button>`
         : `<div class="callout">Everyone gets the same <b>secret word</b>, except one <b>Impostor</b> who only sees the category. Pass the phone round and peek at your role in secret. Then give one-word clues and vote out the Impostor.</div>
-           <div class="callout"><b>Impostor caught:</b> they take a shot, unless they can guess the word.<br><b>Impostor gets away:</b> everyone else drinks ${IMP_SIPS}.</div>
+           <div class="callout"><b>Impostor caught:</b> they take a shot, unless they can guess the word.<br><b>Impostor gets away:</b> everyone else drinks ${IMP_SIPS}, and anyone voted out by mistake takes a shot.</div>
            <button class="btn fire wide" data-act="im-start" style="min-height:56px">Hand out the roles</button>
            <button class="btn ghost wide" data-act="mini-done">Skip The Impostor</button>`) + board;
     } else if (m.phase === "roles") {
@@ -1470,7 +1472,7 @@ textarea.field { resize: vertical; min-height: 64px; }
         : m.guessed ? `${nm(m.imp)} was caught but guessed the word.` : `${nm(m.imp)} was caught and missed the word.`;
       body = `<div class="verdict ${m.win ? "bad" : "good"}" style="font-size:1.7rem;padding-top:12px">${m.win ? "The Impostor wins!" : "Civilians win!"}</div>
         <div class="imp-secret" style="min-height:0"><span class="label">The Impostor was</span><div class="imp-word" style="font-size:clamp(1.8rem, 9vw, 2.6rem)">${nm(m.imp)}</div><span class="sub">The word was <b>${esc(m.word)}</b></span></div>
-        <div class="callout" style="text-align:center">${why} ${m.win ? `Everyone else drinks ${IMP_SIPS}.` : `${nm(m.imp)} takes a shot.`}</div>
+        <div class="callout" style="text-align:center">${why} ${m.win ? `Everyone else drinks ${IMP_SIPS}.${!m.caught && m.accused !== "none" ? ` ${nm(m.accused)} takes a shot for the false accusation.` : ""}` : `${nm(m.imp)} takes a shot.`}</div>
         <button class="btn primary wide" data-act="im-again">Play another round</button>
         <button class="btn fire wide" data-act="mini-done" style="min-height:56px">Back to the ring</button>` + board;
     }
@@ -1581,7 +1583,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       if (e.type === "race") { txt = `${SUIT_NAMES[e.suit]} won the Horse Race` + (e.winners.length ? `. Winners: ${e.winners.map(nm).join(", ")}` : ". Nobody backed it"); tag = "Horse Race"; }
       if (e.type === "half") { txt = e.self ? `Halftime: Dictator ${nm(e.judge)} came last and caught up with ${esc(e.what)}` : `Halftime: ${e.pids.map(nm).join(" & ")} came last and ${nm(e.judge)} handed out ${esc(e.what)}`; tag = "Halftime"; }
       if (e.type === "door") { txt = `${nm(e.pid)} survived The Door and made ${nm(e.victim)} finish their drink`; tag = "The Door"; }
-      if (e.type === "impostor") { txt = !e.caught ? `${nm(e.pid)} was The Impostor and got away with it (word: “${esc(e.word)}”)` : e.guessed ? `${nm(e.pid)} was caught as The Impostor but guessed “${esc(e.word)}”` : `${nm(e.pid)} was caught as The Impostor (word: “${esc(e.word)}”)`; tag = "The Impostor"; }
+      if (e.type === "impostor") { txt = !e.caught ? `${nm(e.pid)} was The Impostor and got away with it (word: “${esc(e.word)}”)` + (e.accused && e.accused !== "none" ? `. ${nm(e.accused)} was wrongly accused and took a shot` : "") : e.guessed ? `${nm(e.pid)} was caught as The Impostor but guessed “${esc(e.word)}”` : `${nm(e.pid)} was caught as The Impostor (word: “${esc(e.word)}”)`; tag = "The Impostor"; }
       if (e.type === "big") { txt = `${nm(e.pid)} ${e.kind === "shot" ? "took a shot" : "finished a drink"}` + (e.reason !== "Manual" ? ` (${esc(e.reason)})` : ""); tag = e.kind === "shot" ? "Shot" : "Finished"; }
       if (txt) lines.push(`<li><span class="tl-time">${e.card ? "Card " + e.card : clock(e.t)}</span><div><span class="tl-tag">${esc(tag)}</span><p>${txt}</p></div></li>`);
     });

@@ -61,4 +61,5 @@
 .brow .nm { font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .brow .tot { font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .brow .acts { display: flex; gap: 6px; }
-
+.chip { min-height: 46px; }
+.sound-btn[aria-pressed="false"] { opacity: .55; }

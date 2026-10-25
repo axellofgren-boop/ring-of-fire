@@ -24,4 +24,4 @@
 .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; font-size: .88rem; }
 .legend .lg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .race-msg { min-height: 3.2em; }
-
+.tk-side.flipnew { animation: flip .45s cubic-bezier(.2,.8,.2,1); outline: 2px solid var(--bad); }

@@ -118,9 +118,44 @@ To stop mirroring: **Control Centre → Screen Mirroring → Stop Mirroring**.
 
 - **"Add to Home Screen" is missing on iPhone.** You're not in Safari. Copy the link, open Safari, and paste it there.
 - **The game doesn't open offline.** It needs one visit with internet first, from the home-screen icon. Open it online once, wait a few seconds, then try again.
-- **It won't turn sideways.** Turn off Rotation Lock (iPhone) or turn on Auto-rotate (Android). On a phone, landscape mode kicks in when the screen is wide enough, so very small phones may stay in the normal layout.
+- **It won't turn sideways.** Turn off Rotation Lock (iPhone) or turn on Auto-rotate (Android).
 - **My players and scores are gone.** Saved data lives in the browser you played in. Clearing Safari or Chrome history and website data wipes it, and the iPhone home-screen app has its own separate save.
 - **I don't see the latest version.** Open the game while online, close it fully, and open it again.
 - **The TV picture has black bars.** That's normal for mirroring a phone. Turn the phone sideways to fill more of the TV.
+
+---
+
+## 🛠 For whoever changes the game
+
+The game you play is the single file `index.html`. Don't edit it by hand: it is built from the small files in `src/`.
+
+| Folder | What lives there |
+| --- | --- |
+| `src/core/` | The rules: game state and saving, drinks and mates, the card flow, halftime, mini-game rotation, awards. No screen code, so it can be tested on its own. |
+| `src/minigames/<game>/` | One folder per mini-game: `logic.js` (its rules), `view.js` (its screens), `style.css` (its look). |
+| `src/ui/` | Drawing the screens, taps and buttons, sounds, pop-ups, the cogwheel sheets. |
+| `src/styles/` | The shared look. `styles/layout/` holds one file per form factor: `phone-portrait.css`, `landscape.css` (shared by the next two), `phone-landscape.css` and `desktop.css` (laptop, desktop, TV). |
+| `tests/unit/` | Game-logic tests (no browser). |
+| `tests/e2e/` | A tour through every screen in a real browser, with layout checks and screenshots. |
+
+The three layouts switch on the screen's shape:
+
+- **Phone portrait**: taller than wide.
+- **Phone landscape**: wider than tall, up to 600px high. The main way the game is played, often mirrored to a TV.
+- **Desktop / TV**: wider than tall and more than 600px high.
+
+To work on it you need [Node.js](https://nodejs.org) 22 or newer:
+
+```
+npm install                          # once
+npx playwright install chromium      # once, the browser the checks use
+npm run build                        # rebuild index.html and sw.js after changing src/
+npm test                             # everything below, as GitHub runs it on every pull request
+npm run test:unit                    # game-logic tests
+npm run test:e2e                     # layout checks at 9 screen sizes
+npm run screens                      # screenshots of every screen at the 3 main sizes, into screens/
+```
+
+Commit the rebuilt `index.html` and `sw.js` with your change; the checks fail if they are out of date.
 
 Drink responsibly, look after each other, and never drink and drive. 🍻

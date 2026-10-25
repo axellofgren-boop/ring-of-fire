@@ -1,14 +1,4 @@
-/* The ring centre shows just the count, so it can be big. */
-.cup .kings { font-size: clamp(2rem, 10vmin, 3.2rem); line-height: 1; }
-
-/* Party polish */
-.rc::after { content: ""; position: absolute; inset: -5px -3px; }
-.rc.pulling { transition: transform .18s ease-out; z-index: 6; box-shadow: 0 0 0 2px var(--gold), 0 10px 24px rgba(255,106,43,.55); }
-.chip { min-height: 46px; }
-.sound-btn[aria-pressed="false"] { opacity: .55; }
-.die.landed { animation: land .35s cubic-bezier(.2,.8,.2,1.4); }
-@keyframes land { 0% { transform: scale(1.25) rotate(12deg); } 100% { transform: none; } }
-.tk-side.flipnew { animation: flip .45s cubic-bezier(.2,.8,.2,1); outline: 2px solid var(--bad); }
+/* Pop-ups over any screen: the drinks toast, the mate reminder, confetti. */
 .toast {
   position: fixed; left: 16px; right: 16px; margin: 0 auto; width: fit-content; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 40;
   max-width: 520px;
@@ -30,4 +20,3 @@
 .mate-pop .mp-n { flex: none; padding: 1px 8px; border-radius: 999px; background: rgba(42,10,6,.85); color: var(--gold); font-size: .9rem; white-space: nowrap; }
 @keyframes matepop { 0% { opacity: 0; transform: translateY(-24px) scale(.9); } 8% { opacity: 1; transform: none; } 12% { transform: scale(1.04); } 16%, 88% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-12px); } }
 .confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
-

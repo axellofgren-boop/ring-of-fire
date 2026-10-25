@@ -19,6 +19,7 @@ export const SIZES = {
 export const EXTRA_SIZES = {
   "small-portrait": { width: 360, height: 640 },
   "small-landscape": { width: 667, height: 375 },
+  "tiny-landscape": { width: 568, height: 320 },
   "tablet-landscape": { width: 1180, height: 820 },
   "laptop": { width: 1366, height: 768 },
   "wide-pc": { width: 1994, height: 1013 },

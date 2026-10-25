@@ -11,4 +11,5 @@
 .verdict { text-align: center; font-family: var(--f-display); font-size: 1.3rem; }
 .verdict.good { color: var(--good); }
 .verdict.bad { color: var(--bad); }
-
+.die.landed { animation: land .35s cubic-bezier(.2,.8,.2,1.4); }
+@keyframes land { 0% { transform: scale(1.25) rotate(12deg); } 100% { transform: none; } }

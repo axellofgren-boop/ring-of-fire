@@ -2,7 +2,7 @@
 //   node tools/build.mjs           write index.html and sw.js
 //   node tools/build.mjs --check   fail if the committed index.html or sw.js are out of date
 //
-// The source is plain ES modules. The browser can run them directly (see src/dev.html), but GitHub Pages, the Artifact and
+// The source is plain ES modules (the logic tests import them straight into Node). GitHub Pages, the Artifact and
 // double-clicking index.html all need one self-contained file, so this joins them: modules in import order inside one
 // function scope, with the import and export keywords removed. That only works if every top-level name is unique across
 // the whole app and every import names something its file really exports, so both are checked here.
@@ -18,19 +18,22 @@ export const STYLES = [
   "styles/fonts.css",
   "styles/base.css",
   "styles/setup.css",
+  "styles/rules-editor.css",
   "styles/ring.css",
   "styles/sheets.css",
   "styles/dice.css",
-  "styles/rules-editor.css",
+  "styles/end.css",
+  "styles/chart.css",
+  "styles/effects.css",
   "minigames/horse-race/style.css",
   "minigames/bomb/style.css",
   "minigames/door/style.css",
-  "styles/end.css",
   "minigames/impostor/style.css",
-  "styles/layout/landscape-old.css",
-  "styles/polish.css",
-  "styles/chart.css",
-  "styles/layout/ring-fit-old.css",
+  // One file per form factor. Each wraps its rules in a single media query, so a change for one never leaks into another.
+  "styles/layout/phone-portrait.css",
+  "styles/layout/landscape.css",
+  "styles/layout/phone-landscape.css",
+  "styles/layout/desktop.css",
   "styles/motion.css"
 ];
 

@@ -2,8 +2,7 @@ import { cardsLeft, roleOnce, ruleLabel } from "../../core/game.js";
 import { RANKS } from "../../core/rules.js";
 import { cur, player, S } from "../../core/state.js";
 import { esc } from "../../core/util.js";
-import { fold } from "../components.js";
-import { $, LAYOUT } from "../render.js";
+import { $ } from "../render.js";
 
 export function viewGame() {
   const g = S.game;
@@ -21,15 +20,13 @@ export function viewGame() {
     powers.push(bar("House rule", esc(ruleLabel(i)), `<button class="btn small" data-act="penalty" data-k="rule:${i}">Broke it</button>`)));
   const mates = Object.entries(g.mates || {});
   if (mates.length) powers.push(`<div class="mates-line"><span class="label">Mates</span> ${mates.map(([a, b]) => `${esc(player(a).name)} &amp; ${esc(player(b).name)}`).join(" &middot; ")}</div>`);
-  const dict = !powers.length ? "" : LAYOUT === "c" && powers.length > 2
-    ? `<div class="powers">${powers[0]}${fold("powers", `More roles &amp; rules (${powers.length - 1})`, powers.slice(1).join(""))}</div>`
-    : `<div class="powers">${powers.join("")}</div>`;
+  const dict = powers.length ? `<div class="powers">${powers.join("")}</div>` : "";
   let middle;
   const cards = g.deck.map((c, i) => `<button class="rc ${c.drawn ? "drawn" : ""}" data-act="draw" data-id="${c.id}" data-i="${i}" aria-label="Draw card ${i + 1}" ${c.drawn ? "tabindex='-1'" : ""}></button>`).join("");
   middle = `<div class="ring" id="ring">${cards}
     <button class="cup" data-act="random" aria-label="Draw a random card for me"><span class="kings">${cardsLeft()}</span><small>tap to draw</small></button>
   </div>`;
-  return `<div class="wrap game lay-${LAYOUT}">
+  return `<div class="wrap game">
     <div class="g-side">
     <div class="topbar">
       <div class="stats">
@@ -47,11 +44,14 @@ export function viewGame() {
   </div>`;
 }
 
+// The ring is the biggest circle that fits its area, whatever the screen. Cards sit on a circle at 38% of its size.
 export function layoutRing() {
   const ring = $("#ring");
   if (!ring) return;
-  if (ringObs && ringSeen !== ring) { ringObs.disconnect(); ringObs.observe(ring); ringSeen = ring; }
-  const size = ring.clientWidth;
+  const area = ring.parentElement;
+  if (ringObs && ringSeen !== area) { ringObs.disconnect(); ringObs.observe(area); ringSeen = area; }
+  const size = Math.max(120, Math.floor(Math.min(area.clientWidth, area.clientHeight)));
+  ring.style.setProperty("--ring-size", size + "px");
   const R = size * 0.38, w = Math.max(18, size * 0.085), h = size * 0.19;
   ring.querySelectorAll(".rc").forEach(el => {
     const i = +el.dataset.i, c = S.game.deck[i];
@@ -61,7 +61,7 @@ export function layoutRing() {
   });
 }
 window.addEventListener("resize", () => { if (S.screen === "game") layoutRing(); });
-// iOS reports the size before a rotation has settled, so also watch the ring's own box.
+// iOS reports the size before a rotation has settled, so also watch the ring's area itself.
 let ringSeen = null;
 export const ringObs = "ResizeObserver" in window ? new ResizeObserver(() => { if (S.screen === "game") layoutRing(); }) : null;
 window.addEventListener("orientationchange", () => setTimeout(() => { if (S.screen === "game") layoutRing(); }, 350));

@@ -1,0 +1,41 @@
+/* ---------- Sideways: phone on its side, laptop, TV ----------
+   The ring fills the left; whose turn it is and the roles sit on the right. Pop-up cards sit in the middle of the screen.
+   phone-landscape.css and desktop.css only adjust sizes on top of this. */
+@media (orientation: landscape) {
+  .wrap { max-width: 760px; padding-block: 12px 20px; }
+  .wrap.game {
+    max-width: 1280px; height: 100dvh; min-height: 0;
+    display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, 1fr);
+    grid-template-areas: "main side" "main extra"; grid-template-rows: auto minmax(0, 1fr);
+    gap: 8px 28px; align-items: stretch;
+    padding-block: max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-bottom, 0px));
+  }
+  .game .g-main { grid-area: main; }
+  .game .g-side { display: flex; flex-direction: column; gap: 6px; grid-area: side; }
+  .game .g-extra { display: block; grid-area: extra; overflow-y: auto; }
+  .game .stat { display: flex; gap: 6px; align-items: baseline; }
+  .game .iconbtn.cog { width: 40px; height: 40px; }
+  .game .turn {
+    text-align: left; padding: 4px 14px 6px; background: var(--surface); border-radius: 18px; border: 1.5px solid var(--line);
+    display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 12px;
+  }
+  .game .turn > .label { width: 100%; font-size: .66rem; }
+  .game .turn .now { font-size: clamp(1.5rem, 6.5vh, 3rem); }
+  .game .turn .next { font-size: 1rem; }
+  .dictator-bar { padding: 6px; gap: 4px; }
+
+  .scrim { align-items: center; }
+  .sheet { max-width: 760px; max-height: 94dvh; border-radius: 22px; padding-bottom: 18px; }
+  .sheet.rv { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 28px; }
+  .sheet.rv .reveal { width: calc(min(62dvh, 440px) * 5 / 7); }
+  .sheet.rv .reveal .face { height: min(62dvh, 440px); max-width: none; }
+  .sheet.rv .reveal h2 { font-size: clamp(1.6rem, 6vh, 2.4rem); overflow-wrap: anywhere; }
+  .sheet.rv.busy .reveal { width: calc(min(46dvh, 320px) * 5 / 7); }
+  .sheet.rv.busy .reveal .face { height: min(46dvh, 320px); }
+  .sheet.rv.busy .rv-act { gap: 8px; }
+  .sheet.rv.busy .alloc-row { padding-block: 3px; }
+  .sheet.rv.busy .alloc-row .iconbtn { width: 38px; height: 38px; }
+
+  .boom-layout { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); align-items: center; min-height: calc(100dvh - 40px); }
+  .boom-svg { width: min(38vw, 70dvh, 360px); }
+}

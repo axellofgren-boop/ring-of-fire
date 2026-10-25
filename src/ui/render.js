@@ -7,7 +7,6 @@ import { viewMini } from "./views/mini.js";
 import { layoutRing, viewGame } from "./views/ring.js";
 import { viewRules, viewSetup } from "./views/setup.js";
 
-export const LAYOUT = "b";
 export function $(sel, root) { return (root || document).querySelector(sel); }
 // ---------- Rendering ----------
 export const app = $("#app");

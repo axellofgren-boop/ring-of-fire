@@ -1,16 +1,23 @@
-/* ---------- Game ---------- */
+/* ---------- The ring screen ----------
+   Three areas: g-side (round, card, whose turn), g-main (the ring) and g-extra (Dictator, roles, house rules, mates).
+   Where they sit is up to the layout files; here is only how each piece looks. */
 .topbar { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
 .stats { display: flex; gap: 14px; font-variant-numeric: tabular-nums; }
 .stat { display: grid; white-space: nowrap; }
 .stat b { font-family: var(--f-display); font-weight: 400; font-size: 1.15rem; line-height: 1.1; }
-.dictator-bar {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px; padding: 6px 6px 6px 14px;
-}
-.dictator-bar .who { min-width: 0; }
-.dictator-bar .who b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.ring { position: relative; width: min(100%, 440px); aspect-ratio: 1; margin: 0 auto; max-width: 100%; }
+.turn { text-align: center; display: grid; gap: 2px; }
+.turn .now { font-family: var(--f-display); font-size: clamp(1.8rem, 9vw, 2.6rem); line-height: 1.05; color: var(--fg); overflow-wrap: anywhere; }
+.turn .next { color: var(--muted); font-size: .92rem; }
+
+/* The ring is always the biggest circle that fits its area: ring.js measures g-main and sets --ring-size,
+   and every size inside the ring follows from it. */
+.game .g-main { position: relative; min-width: 0; min-height: 0; }
+.ring {
+  --ring-size: 300px;
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: var(--ring-size); height: var(--ring-size);
+}
 .ring::before {
   content: ""; position: absolute; inset: 9%; border-radius: 50%;
   background: radial-gradient(circle, transparent 54%, rgba(255,106,43,.28) 64%, rgba(242,179,61,.10) 72%, transparent 76%);
@@ -25,23 +32,32 @@
   box-shadow: 0 1px 3px rgba(0,0,0,.5);
   transition: opacity .25s ease;
 }
+.rc::after { content: ""; position: absolute; inset: -5px -3px; }
 .rc:hover { filter: brightness(1.25); }
 .rc.drawn { opacity: 0; pointer-events: none; }
+.rc.pulling { transition: transform .18s ease-out; z-index: 6; box-shadow: 0 0 0 2px var(--gold), 0 10px 24px rgba(255,106,43,.55); }
+
+/* The centre of the ring is the "draw for me" button and shows how many cards are left. */
 .cup {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
   width: 44%; aspect-ratio: 1; border-radius: 50%;
   display: grid; place-items: center; text-align: center; align-content: center; gap: 2px;
   background: radial-gradient(circle at 50% 40%, var(--surface-2), var(--surface));
-  border: 2px solid var(--line);
+  border: 2px solid var(--line); color: var(--fg); padding: 0; cursor: pointer;
 }
-.cup .kings { font-family: var(--f-display); color: var(--gold); font-size: 1.35rem; }
-.cup .dots { display: flex; gap: 5px; justify-content: center; }
-.cup .dots i { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--gold); }
-.cup .dots i.on { background: var(--gold); }
-.cup small { color: var(--muted); font-size: .78rem; max-width: 14ch; line-height: 1.25; }
+.cup:active { transform: translate(-50%,-50%) scale(.97); }
+.cup .kings { font-family: var(--f-display); color: var(--gold); font-size: max(2rem, calc(var(--ring-size) * .105)); line-height: 1; }
+.cup small { color: var(--muted); font-size: max(.72rem, calc(var(--ring-size) * .02)); font-weight: 700; letter-spacing: .04em; max-width: 14ch; line-height: 1.25; }
 
-.turn { text-align: center; display: grid; gap: 2px; }
-.turn .now { font-family: var(--f-display); font-size: clamp(1.8rem, 9vw, 2.6rem); line-height: 1.05; color: var(--fg); overflow-wrap: anywhere; }
-.turn .next { color: var(--muted); font-size: .92rem; }
-.banner { background: var(--surface-2); border-radius: 14px; padding: 12px 14px; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-
+/* Roles and rules in play, as tiles: who holds it and a button to log a drink. */
+.powers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.dictator-bar {
+  display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 8px;
+  background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px;
+}
+.dictator-bar .who { display: grid; gap: 0; flex: 1; min-width: 0; }
+.dictator-bar .who b { display: block; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .95rem; }
+.dictator-bar .who .label { font-size: .68rem; letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dictator-bar .btn.small { min-height: 32px; padding: 4px 8px; font-size: .92rem; white-space: nowrap; flex: none; }
+.mates-line { grid-column: 1 / -1; font-size: .9rem; color: var(--fg); padding: 2px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mates-line .label { margin-right: 6px; }

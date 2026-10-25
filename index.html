@@ -99,19 +99,38 @@ h2 { font-size: 1.35rem; }
 }
 .field:focus { border-color: var(--gold); outline: none; }
 textarea.field { resize: vertical; min-height: 64px; }
-/* ---------- Game ---------- */
+
+.banner { background: var(--surface-2); border-radius: 14px; padding: 12px 14px; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+/* Rules editor */
+.rule-ed { background: var(--surface); border-radius: 16px; padding: 12px; display: grid; gap: 8px; }
+.rule-ed .top { display: grid; grid-template-columns: 44px minmax(0,1fr); gap: 10px; align-items: center; }
+.rule-ed .badge { width: 44px; aspect-ratio: 5/7; border-radius: 6px; background: var(--card); color: var(--ink); display: grid; place-items: center; font-family: var(--f-display); }
+.rule-ed .opts { display: grid; grid-template-columns: minmax(0,1fr) 92px; gap: 8px; }
+
+.mini-hero { text-align: center; display: grid; gap: 10px; justify-items: center; padding-top: 24px; }
+.mini-hero h1 { font-size: clamp(2.2rem, 11vw, 3.2rem); color: var(--gold); line-height: 1; }
+.half-name { font-family: var(--f-display); font-size: clamp(2rem, 10vw, 3rem); line-height: 1.05; overflow-wrap: anywhere; }
+.placeholder { border: 2px dashed var(--line); border-radius: 18px; padding: 18px; display: grid; gap: 8px; }
+/* ---------- The ring screen ----------
+   Three areas: g-side (round, card, whose turn), g-main (the ring) and g-extra (Dictator, roles, house rules, mates).
+   Where they sit is up to the layout files; here is only how each piece looks. */
 .topbar { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
 .stats { display: flex; gap: 14px; font-variant-numeric: tabular-nums; }
 .stat { display: grid; white-space: nowrap; }
 .stat b { font-family: var(--f-display); font-weight: 400; font-size: 1.15rem; line-height: 1.1; }
-.dictator-bar {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px; padding: 6px 6px 6px 14px;
-}
-.dictator-bar .who { min-width: 0; }
-.dictator-bar .who b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.ring { position: relative; width: min(100%, 440px); aspect-ratio: 1; margin: 0 auto; max-width: 100%; }
+.turn { text-align: center; display: grid; gap: 2px; }
+.turn .now { font-family: var(--f-display); font-size: clamp(1.8rem, 9vw, 2.6rem); line-height: 1.05; color: var(--fg); overflow-wrap: anywhere; }
+.turn .next { color: var(--muted); font-size: .92rem; }
+
+/* The ring is always the biggest circle that fits its area: ring.js measures g-main and sets --ring-size,
+   and every size inside the ring follows from it. */
+.game .g-main { position: relative; min-width: 0; min-height: 0; }
+.ring {
+  --ring-size: 300px;
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: var(--ring-size); height: var(--ring-size);
+}
 .ring::before {
   content: ""; position: absolute; inset: 9%; border-radius: 50%;
   background: radial-gradient(circle, transparent 54%, rgba(255,106,43,.28) 64%, rgba(242,179,61,.10) 72%, transparent 76%);
@@ -126,25 +145,35 @@ textarea.field { resize: vertical; min-height: 64px; }
   box-shadow: 0 1px 3px rgba(0,0,0,.5);
   transition: opacity .25s ease;
 }
+.rc::after { content: ""; position: absolute; inset: -5px -3px; }
 .rc:hover { filter: brightness(1.25); }
 .rc.drawn { opacity: 0; pointer-events: none; }
+.rc.pulling { transition: transform .18s ease-out; z-index: 6; box-shadow: 0 0 0 2px var(--gold), 0 10px 24px rgba(255,106,43,.55); }
+
+/* The centre of the ring is the "draw for me" button and shows how many cards are left. */
 .cup {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
   width: 44%; aspect-ratio: 1; border-radius: 50%;
   display: grid; place-items: center; text-align: center; align-content: center; gap: 2px;
   background: radial-gradient(circle at 50% 40%, var(--surface-2), var(--surface));
-  border: 2px solid var(--line);
+  border: 2px solid var(--line); color: var(--fg); padding: 0; cursor: pointer;
 }
-.cup .kings { font-family: var(--f-display); color: var(--gold); font-size: 1.35rem; }
-.cup .dots { display: flex; gap: 5px; justify-content: center; }
-.cup .dots i { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--gold); }
-.cup .dots i.on { background: var(--gold); }
-.cup small { color: var(--muted); font-size: .78rem; max-width: 14ch; line-height: 1.25; }
+.cup:active { transform: translate(-50%,-50%) scale(.97); }
+.cup .kings { font-family: var(--f-display); color: var(--gold); font-size: max(2rem, calc(var(--ring-size) * .105)); line-height: 1; }
+.cup small { color: var(--muted); font-size: max(.72rem, calc(var(--ring-size) * .02)); font-weight: 700; letter-spacing: .04em; max-width: 14ch; line-height: 1.25; }
 
-.turn { text-align: center; display: grid; gap: 2px; }
-.turn .now { font-family: var(--f-display); font-size: clamp(1.8rem, 9vw, 2.6rem); line-height: 1.05; color: var(--fg); overflow-wrap: anywhere; }
-.turn .next { color: var(--muted); font-size: .92rem; }
-.banner { background: var(--surface-2); border-radius: 14px; padding: 12px 14px; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+/* Roles and rules in play, as tiles: who holds it and a button to log a drink. */
+.powers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.dictator-bar {
+  display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 8px;
+  background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px;
+}
+.dictator-bar .who { display: grid; gap: 0; flex: 1; min-width: 0; }
+.dictator-bar .who b { display: block; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .95rem; }
+.dictator-bar .who .label { font-size: .68rem; letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dictator-bar .btn.small { min-height: 32px; padding: 4px 8px; font-size: .92rem; white-space: nowrap; flex: none; }
+.mates-line { grid-column: 1 / -1; font-size: .9rem; color: var(--fg); padding: 2px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mates-line .label { margin-right: 6px; }
 /* ---------- Sheets ---------- */
 .scrim {
   position: fixed; inset: 0; background: rgba(10,2,4,.66); z-index: 20;
@@ -208,6 +237,8 @@ textarea.field { resize: vertical; min-height: 64px; }
 .brow .nm { font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .brow .tot { font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .brow .acts { display: flex; gap: 6px; }
+.chip { min-height: 46px; }
+.sound-btn[aria-pressed="false"] { opacity: .55; }
 /* Dice */
 .die {
   width: 96px; height: 96px; border-radius: 18px; background: var(--card); margin: 4px auto;
@@ -221,16 +252,77 @@ textarea.field { resize: vertical; min-height: 64px; }
 .verdict { text-align: center; font-family: var(--f-display); font-size: 1.3rem; }
 .verdict.good { color: var(--good); }
 .verdict.bad { color: var(--bad); }
-/* Rules editor */
-.rule-ed { background: var(--surface); border-radius: 16px; padding: 12px; display: grid; gap: 8px; }
-.rule-ed .top { display: grid; grid-template-columns: 44px minmax(0,1fr); gap: 10px; align-items: center; }
-.rule-ed .badge { width: 44px; aspect-ratio: 5/7; border-radius: 6px; background: var(--card); color: var(--ink); display: grid; place-items: center; font-family: var(--f-display); }
-.rule-ed .opts { display: grid; grid-template-columns: minmax(0,1fr) 92px; gap: 8px; }
-
-.mini-hero { text-align: center; display: grid; gap: 10px; justify-items: center; padding-top: 24px; }
-.mini-hero h1 { font-size: clamp(2.2rem, 11vw, 3.2rem); color: var(--gold); line-height: 1; }
-.half-name { font-family: var(--f-display); font-size: clamp(2rem, 10vw, 3rem); line-height: 1.05; overflow-wrap: anywhere; }
-.placeholder { border: 2px dashed var(--line); border-radius: 18px; padding: 18px; display: grid; gap: 8px; }
+.die.landed { animation: land .35s cubic-bezier(.2,.8,.2,1.4); }
+@keyframes land { 0% { transform: scale(1.25) rotate(12deg); } 100% { transform: none; } }
+/* End of night */
+.night-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; text-align: center; }
+.night-stats > div { background: var(--surface); border-radius: 14px; padding: 10px 4px; display: grid; gap: 2px; }
+.night-stats b { font-family: var(--f-display); font-weight: 400; font-size: 1.3rem; color: var(--gold); font-variant-numeric: tabular-nums; }
+.night-stats .label { font-size: .66rem; letter-spacing: .08em; }
+.awards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.award { background: var(--surface); border-radius: 16px; padding: 14px 12px; display: grid; gap: 4px; align-content: start; min-width: 0; }
+.award:first-child { background: linear-gradient(160deg, var(--surface-2), var(--surface)); border: 1.5px solid var(--gold); }
+.awards.odd .award:first-child { grid-column: 1 / -1; }
+.awards.odd .award:first-child .aw-who { font-size: 1.8rem; }
+.award .label { color: var(--gold); }
+.aw-who { font-family: var(--f-display); font-size: 1.2rem; line-height: 1.1; overflow-wrap: anywhere; }
+.aw-stat { font-weight: 800; font-size: .92rem; }
+.aw-blurb { color: var(--muted); font-size: .82rem; line-height: 1.3; }
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.timeline li { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.timeline li:last-child { border-bottom: 0; }
+.tl-time { font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 2px; }
+.tl-tag { font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; color: var(--gold); font-weight: 800; }
+.timeline p { margin: 2px 0 0; }
+@media (max-width: 360px) { .night-stats { grid-template-columns: repeat(2, 1fr); } }
+/* Night chart */
+.dchart { background: var(--surface); border-radius: 18px; padding: 14px 12px 10px; display: grid; gap: 10px; position: relative; }
+.dchart .legend-row { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .85rem; }
+.dchart .legend-row span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.dchart .legend-row i { width: 14px; height: 3px; border-radius: 2px; flex: none; }
+.dchart svg { width: 100%; height: auto; display: block; touch-action: pan-y; overflow: visible; }
+.dchart .grid line { stroke: var(--line); stroke-width: 1; }
+.dchart text { fill: var(--muted); font-family: var(--f-body); font-size: 11px; font-variant-numeric: tabular-nums; }
+.dchart text.dl { fill: var(--fg); font-weight: 700; font-size: 12px; }
+.dchart text.mg { fill: var(--gold); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.dchart .mgline { stroke: var(--gold); stroke-opacity: .35; stroke-dasharray: 3 4; }
+.dchart .xh { stroke: var(--fg); stroke-opacity: .5; }
+.dchart .tip {
+  position: absolute; top: 46px; pointer-events: none; z-index: 2; min-width: 150px;
+  background: var(--bg); border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 10px; font-size: .82rem;
+  box-shadow: 0 8px 20px rgba(0,0,0,.45); display: grid; gap: 3px;
+}
+.dchart .tip b { font-family: var(--f-display); font-weight: 400; color: var(--gold); }
+.dchart .tip .r { display: flex; align-items: center; gap: 8px; justify-content: space-between; font-variant-numeric: tabular-nums; }
+.dchart .tip .r span { display: inline-flex; align-items: center; gap: 6px; }
+.dchart .tip i { width: 8px; height: 8px; border-radius: 50%; }
+.dchart .note { font-size: .78rem; color: var(--muted); }
+.dchart details summary { cursor: pointer; font-size: .85rem; color: var(--muted); }
+.dchart table { width: 100%; border-collapse: collapse; font-size: .85rem; font-variant-numeric: tabular-nums; margin-top: 8px; }
+.dchart th, .dchart td { text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.dchart th:first-child, .dchart td:first-child { text-align: left; }
+/* Pop-ups over any screen: the drinks toast, the mate reminder, confetti. */
+.toast {
+  position: fixed; left: 16px; right: 16px; margin: 0 auto; width: fit-content; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 40;
+  max-width: 520px;
+  background: var(--fg); color: var(--ink); font-weight: 800; border-radius: 999px; padding: 10px 18px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.45); text-align: center; pointer-events: none;
+  animation: toast 2.2s ease forwards;
+}
+@keyframes toast { 0% { opacity: 0; transform: translateY(12px); } 10%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+.mate-pop {
+  position: fixed; left: 16px; right: 16px; margin: 0 auto; width: fit-content; max-width: 560px; z-index: 41;
+  top: max(14px, env(safe-area-inset-top, 0px));
+  display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-radius: 20px;
+  background: linear-gradient(135deg, var(--gold), #ff6a2b); color: #2a0a06; font-weight: 800; font-size: 1.08rem; line-height: 1.3;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.18), 0 12px 32px rgba(0,0,0,.55); cursor: pointer;
+  animation: matepop 4.2s cubic-bezier(.2,.8,.2,1.2) forwards;
+}
+.mate-pop .mp-ico { font-size: 2rem; }
+.mate-pop .mp-line { display: flex; align-items: center; gap: 10px; }
+.mate-pop .mp-n { flex: none; padding: 1px 8px; border-radius: 999px; background: rgba(42,10,6,.85); color: var(--gold); font-size: .9rem; white-space: nowrap; }
+@keyframes matepop { 0% { opacity: 0; transform: translateY(-24px) scale(.9); } 8% { opacity: 1; transform: none; } 12% { transform: scale(1.04); } 16%, 88% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-12px); } }
+.confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
 /* Horse Race */
 .red-suit { color: var(--suit-red); }
 .bet { background: var(--bg); border-radius: 14px; padding: 10px; display: grid; gap: 8px; }
@@ -257,6 +349,7 @@ textarea.field { resize: vertical; min-height: 64px; }
 .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; font-size: .88rem; }
 .legend .lg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .race-msg { min-height: 3.2em; }
+.tk-side.flipnew { animation: flip .45s cubic-bezier(.2,.8,.2,1); outline: 2px solid var(--bad); }
 /* The Bomb */
 .bomb-stage { display: grid; justify-items: center; gap: 4px; padding: 4px 0 2px; }
 .bomb-svg { width: min(44vw, 180px); height: auto; overflow: visible; filter: drop-shadow(0 12px 22px rgba(0,0,0,.55)); }
@@ -269,10 +362,6 @@ textarea.field { resize: vertical; min-height: 64px; }
 .boom-layout { display: grid; gap: 10px; }
 .boom-side { display: grid; gap: 10px; align-content: center; min-width: 0; }
 .boom-side .panel { gap: 10px; }
-@media (orientation: landscape) and (min-width: 560px) {
-  .boom-layout { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); align-items: center; min-height: calc(100dvh - 40px); }
-  .boom-svg { width: min(38vw, 70dvh, 360px); }
-}
 .boom-svg.pop { animation: boom .7s cubic-bezier(.2,.8,.2,1.3); }
 @keyframes boom { 0% { transform: scale(.15) rotate(-30deg); opacity: 0; } 100% { transform: none; } }
 .wrap.shake { animation: shake .6s; }
@@ -310,27 +399,6 @@ textarea.field { resize: vertical; min-height: 64px; }
 .door-turn b { font-family: var(--f-display); font-weight: 400; font-size: clamp(1.8rem, 9vw, 2.6rem); color: var(--fg); line-height: 1.1; overflow-wrap: anywhere; }
 .victims { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .victims .btn { min-height: 52px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* End of night */
-.night-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; text-align: center; }
-.night-stats > div { background: var(--surface); border-radius: 14px; padding: 10px 4px; display: grid; gap: 2px; }
-.night-stats b { font-family: var(--f-display); font-weight: 400; font-size: 1.3rem; color: var(--gold); font-variant-numeric: tabular-nums; }
-.night-stats .label { font-size: .66rem; letter-spacing: .08em; }
-.awards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.award { background: var(--surface); border-radius: 16px; padding: 14px 12px; display: grid; gap: 4px; align-content: start; min-width: 0; }
-.award:first-child { background: linear-gradient(160deg, var(--surface-2), var(--surface)); border: 1.5px solid var(--gold); }
-.awards.odd .award:first-child { grid-column: 1 / -1; }
-.awards.odd .award:first-child .aw-who { font-size: 1.8rem; }
-.award .label { color: var(--gold); }
-.aw-who { font-family: var(--f-display); font-size: 1.2rem; line-height: 1.1; overflow-wrap: anywhere; }
-.aw-stat { font-weight: 800; font-size: .92rem; }
-.aw-blurb { color: var(--muted); font-size: .82rem; line-height: 1.3; }
-.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
-.timeline li { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
-.timeline li:last-child { border-bottom: 0; }
-.tl-time { font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 2px; }
-.tl-tag { font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; color: var(--gold); font-weight: 800; }
-.timeline p { margin: 2px 0 0; }
-@media (max-width: 360px) { .night-stats { grid-template-columns: repeat(2, 1fr); } }
 /* The Impostor */
 .imp-pass { text-align: center; display: grid; gap: 6px; justify-items: center; background: var(--surface); border: 1.5px solid var(--line); border-radius: 22px; padding: 22px 16px; }
 .imp-secret { text-align: center; display: grid; gap: 6px; justify-items: center; align-content: center; min-height: 200px; background: var(--card); color: var(--ink); border-radius: 22px; padding: 22px 16px; box-shadow: 0 10px 28px rgba(0,0,0,.45); }
@@ -343,28 +411,43 @@ textarea.field { resize: vertical; min-height: 64px; }
 .imp-order { display: flex; flex-wrap: wrap; gap: 6px; counter-reset: c; list-style: none; padding: 0; margin: 0; }
 .imp-order li { counter-increment: c; background: var(--bg); border-radius: 999px; padding: 6px 12px; font-weight: 700; }
 .imp-order li::before { content: counter(c) ". "; color: var(--gold); }
-/* ---------- Landscape / TV ----------
-   Rotate the phone sideways and mirror it to a TV (AirPlay, Chromecast): the ring fills the left, turn info and powers sit on the right. */
-.g-side, .g-main, .g-extra { display: contents; }
-@media (orientation: landscape) and (min-width: 640px) {
+/* ---------- Phone held upright ----------
+   One column: whose turn on top, the ring fills the middle, roles underneath. The ring screen never scrolls. */
+@media (orientation: portrait) {
+  .g-side, .g-main, .g-extra { display: contents; }
+  .wrap.game { height: 100dvh; min-height: 0; padding-block: max(10px, env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-bottom, 0px)); gap: 10px; }
+  .game .turn { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; text-align: left; }
+  .game .turn > .label { display: none; }
+  .game .turn .now { font-size: clamp(1.6rem, 7vw, 2.2rem); }
+  .game .g-main { display: block; flex: 1; }
+  .game .g-extra { display: block; flex: none; max-height: 42dvh; overflow-y: auto; }
+}
+/* ---------- Sideways: phone on its side, laptop, TV ----------
+   The ring fills the left; whose turn it is and the roles sit on the right. Pop-up cards sit in the middle of the screen.
+   phone-landscape.css and desktop.css only adjust sizes on top of this. */
+@media (orientation: landscape) {
   .wrap { max-width: 760px; padding-block: 12px 20px; }
   .wrap.game {
-    max-width: 1280px; min-height: 100dvh; padding-block: 12px;
+    max-width: 1280px; height: 100dvh; min-height: 0;
     display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, 1fr);
-    grid-template-areas: "main side" "main extra"; grid-template-rows: auto 1fr;
-    gap: 12px 28px; align-items: start;
+    grid-template-areas: "main side" "main extra"; grid-template-rows: auto minmax(0, 1fr);
+    gap: 8px 28px; align-items: stretch;
+    padding-block: max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-bottom, 0px));
   }
-  .g-main { display: flex; flex-direction: column; align-items: center; gap: 10px; grid-area: main; align-self: center; }
-  .g-main > .btn:not(.wide) { width: min(100%, 320px); }
-  .g-main > .panel, .g-main > .banner, .g-main > .btn.wide { align-self: stretch; }
-  .g-side { display: flex; flex-direction: column; gap: 14px; grid-area: side; }
-  .g-extra { display: block; grid-area: extra; min-height: 0; overflow-y: auto; }
-  .game .ring { width: min(100%, calc(100dvh - 100px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))); }
-  .wrap.game { padding-top: max(12px, env(safe-area-inset-top, 0px)); padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); }
-  .game .turn { text-align: left; padding: 14px 18px; background: var(--surface); border-radius: 18px; border: 1.5px solid var(--line); }
-  .game .turn .now { font-size: clamp(2rem, 6.5vh, 3.6rem); }
+  .game .g-main { grid-area: main; }
+  .game .g-side { display: flex; flex-direction: column; gap: 6px; grid-area: side; }
+  .game .g-extra { display: block; grid-area: extra; overflow-y: auto; }
+  .game .stat { display: flex; gap: 6px; align-items: baseline; }
+  .game .iconbtn.cog { width: 40px; height: 40px; }
+  .game .turn {
+    text-align: left; padding: 4px 14px 6px; background: var(--surface); border-radius: 18px; border: 1.5px solid var(--line);
+    display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 12px;
+  }
+  .game .turn > .label { width: 100%; font-size: .66rem; }
+  .game .turn .now { font-size: clamp(1.5rem, 6.5vh, 3rem); }
   .game .turn .next { font-size: 1rem; }
-  .game .panel { gap: 10px; }
+  .dictator-bar { padding: 6px; gap: 4px; }
+
   .scrim { align-items: center; }
   .sheet { max-width: 760px; max-height: 94dvh; border-radius: 22px; padding-bottom: 18px; }
   .sheet.rv { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 28px; }
@@ -376,114 +459,49 @@ textarea.field { resize: vertical; min-height: 64px; }
   .sheet.rv.busy .rv-act { gap: 8px; }
   .sheet.rv.busy .alloc-row { padding-block: 3px; }
   .sheet.rv.busy .alloc-row .iconbtn { width: 38px; height: 38px; }
-}
-/* The ring centre shows just the count, so it can be big. */
-.cup .kings { font-size: clamp(2rem, 10vmin, 3.2rem); line-height: 1; }
 
-/* Party polish */
-.rc::after { content: ""; position: absolute; inset: -5px -3px; }
-.rc.pulling { transition: transform .18s ease-out; z-index: 6; box-shadow: 0 0 0 2px var(--gold), 0 10px 24px rgba(255,106,43,.55); }
-.chip { min-height: 46px; }
-.sound-btn[aria-pressed="false"] { opacity: .55; }
-.die.landed { animation: land .35s cubic-bezier(.2,.8,.2,1.4); }
-@keyframes land { 0% { transform: scale(1.25) rotate(12deg); } 100% { transform: none; } }
-.tk-side.flipnew { animation: flip .45s cubic-bezier(.2,.8,.2,1); outline: 2px solid var(--bad); }
-.toast {
-  position: fixed; left: 16px; right: 16px; margin: 0 auto; width: fit-content; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 40;
-  max-width: 520px;
-  background: var(--fg); color: var(--ink); font-weight: 800; border-radius: 999px; padding: 10px 18px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.45); text-align: center; pointer-events: none;
-  animation: toast 2.2s ease forwards;
+  .boom-layout { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); align-items: center; min-height: calc(100dvh - 40px); }
+  .boom-svg { width: min(38vw, 70dvh, 360px); }
 }
-@keyframes toast { 0% { opacity: 0; transform: translateY(12px); } 10%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
-.mate-pop {
-  position: fixed; left: 16px; right: 16px; margin: 0 auto; width: fit-content; max-width: 560px; z-index: 41;
-  top: max(14px, env(safe-area-inset-top, 0px));
-  display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-radius: 20px;
-  background: linear-gradient(135deg, var(--gold), #ff6a2b); color: #2a0a06; font-weight: 800; font-size: 1.08rem; line-height: 1.3;
-  box-shadow: 0 0 0 3px rgba(255,255,255,.18), 0 12px 32px rgba(0,0,0,.55); cursor: pointer;
-  animation: matepop 4.2s cubic-bezier(.2,.8,.2,1.2) forwards;
+/* ---------- Phone on its side (the main way the game is played, often mirrored to a TV) ----------
+   Short screen: everything in landscape.css is already sized for it. Tweaks for very small phones go here. */
+@media (orientation: landscape) and (max-height: 600px) {
+  .wrap.game { column-gap: clamp(12px, 3vw, 28px); }
 }
-.mate-pop .mp-ico { font-size: 2rem; }
-.mate-pop .mp-line { display: flex; align-items: center; gap: 10px; }
-.mate-pop .mp-n { flex: none; padding: 1px 8px; border-radius: 999px; background: rgba(42,10,6,.85); color: var(--gold); font-size: .9rem; white-space: nowrap; }
-@keyframes matepop { 0% { opacity: 0; transform: translateY(-24px) scale(.9); } 8% { opacity: 1; transform: none; } 12% { transform: scale(1.04); } 16%, 88% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-12px); } }
-.confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
-/* Night chart */
-.dchart { background: var(--surface); border-radius: 18px; padding: 14px 12px 10px; display: grid; gap: 10px; position: relative; }
-.dchart .legend-row { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .85rem; }
-.dchart .legend-row span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
-.dchart .legend-row i { width: 14px; height: 3px; border-radius: 2px; flex: none; }
-.dchart svg { width: 100%; height: auto; display: block; touch-action: pan-y; overflow: visible; }
-.dchart .grid line { stroke: var(--line); stroke-width: 1; }
-.dchart text { fill: var(--muted); font-family: var(--f-body); font-size: 11px; font-variant-numeric: tabular-nums; }
-.dchart text.dl { fill: var(--fg); font-weight: 700; font-size: 12px; }
-.dchart text.mg { fill: var(--gold); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
-.dchart .mgline { stroke: var(--gold); stroke-opacity: .35; stroke-dasharray: 3 4; }
-.dchart .xh { stroke: var(--fg); stroke-opacity: .5; }
-.dchart .tip {
-  position: absolute; top: 46px; pointer-events: none; z-index: 2; min-width: 150px;
-  background: var(--bg); border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 10px; font-size: .82rem;
-  box-shadow: 0 8px 20px rgba(0,0,0,.45); display: grid; gap: 3px;
-}
-.dchart .tip b { font-family: var(--f-display); font-weight: 400; color: var(--gold); }
-.dchart .tip .r { display: flex; align-items: center; gap: 8px; justify-content: space-between; font-variant-numeric: tabular-nums; }
-.dchart .tip .r span { display: inline-flex; align-items: center; gap: 6px; }
-.dchart .tip i { width: 8px; height: 8px; border-radius: 50%; }
-.dchart .note { font-size: .78rem; color: var(--muted); }
-.dchart details summary { cursor: pointer; font-size: .85rem; color: var(--muted); }
-.dchart table { width: 100%; border-collapse: collapse; font-size: .85rem; font-variant-numeric: tabular-nums; margin-top: 8px; }
-.dchart th, .dchart td { text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--line); }
-.dchart th:first-child, .dchart td:first-child { text-align: left; }
-/* ---------- Ring screen fits one screen, no scrolling ---------- */
-.cup { color: var(--fg); padding: 0; cursor: pointer; }
-.cup:active { transform: translate(-50%,-50%) scale(.97); }
-.cup small { font-size: .72rem; font-weight: 700; letter-spacing: .04em; }
-.mates-line { font-size: .9rem; color: var(--fg); padding: 2px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mates-line .label { margin-right: 6px; }
-.powers { display: flex; flex-direction: column; gap: 6px; }
-.powers .dictator-bar { padding: 4px 4px 4px 12px; border-radius: 12px; }
-.powers .dictator-bar .btn.small { min-height: 36px; padding: 6px 12px; font-size: .92rem; white-space: nowrap; flex: none; }
-.powers .who b { min-width: 0; }
-.powers .who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; flex: 1; min-width: 0; }
-.powers .who b { max-width: 100%; }
-.powers .who .label { font-size: .68rem; white-space: nowrap; }
-.powers .fold { min-height: 40px; font-size: .92rem; }
-.lay-b .powers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.lay-b .powers .who .label { overflow: hidden; text-overflow: ellipsis; }
-.lay-b .powers .dictator-bar { flex-direction: column; align-items: stretch; padding: 8px; gap: 6px; }
-.lay-b .powers .who { display: grid; gap: 0; }
-.lay-b .powers .who .label { letter-spacing: .06em; }
-.lay-b .powers .who b { font-size: .95rem; }
-.lay-b .powers .dictator-bar .btn.small { min-height: 32px; padding: 4px 8px; }
-@media not ((orientation: landscape) and (min-width: 640px)) { .lay-b .powers { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.lay-b .powers .mates-line { grid-column: 1 / -1; }
-@media not ((orientation: landscape) and (min-width: 640px)) {
-  .wrap.game { height: 100dvh; min-height: 0; padding-block: max(10px, env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-bottom, 0px)); gap: 10px; }
-  .game .turn { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; text-align: left; }
-  .game .turn > .label { display: none; }
-  .game .turn .now { font-size: clamp(1.6rem, 7vw, 2.2rem); }
-  .game .g-main { display: flex; flex: 1; min-height: 0; justify-content: center; align-items: center; }
-  .game .ring { width: auto; height: 100%; max-height: min(100%, 92vw); }
-  .game .g-extra { display: block; flex: none; max-height: 42dvh; overflow-y: auto; }
-}
-@media (orientation: landscape) and (min-width: 640px) {
-  .wrap.game { height: 100dvh; min-height: 0; grid-template-rows: auto minmax(0, 1fr); align-items: stretch; }
-  .wrap.game { padding-block: max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-bottom, 0px)); row-gap: 8px; }
-  .game .g-side { gap: 6px; }
-  .game .stat { display: flex; gap: 6px; align-items: baseline; }
-  .game .iconbtn.cog { width: 40px; height: 40px; }
-  .game .turn { padding: 4px 14px 6px; display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 12px; }
-  .game .turn > .label { width: 100%; font-size: .66rem; }
-  .game .turn .now { font-size: clamp(1.5rem, 6.5vh, 3rem); }
-  .powers .dictator-bar .btn.small { min-height: 32px; padding: 4px 12px; }
-  .powers .dictator-bar { padding-block: 3px; }
-  .lay-b.game .powers { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .lay-b.game .powers .dictator-bar { padding: 6px; gap: 4px; }
-  .game .g-main { align-self: stretch; justify-content: center; min-height: 0; }
-  .game .ring { width: auto; height: min(100%, 100%); max-width: 100%; }
-  .lay-b.game .powers, .lay-a.game .powers { gap: 6px; }
-  .lay-a.game .powers { display: grid; grid-template-columns: minmax(0, 1fr); }
+/* ---------- Laptop, desktop and TV ----------
+   Lots of room: a big ring on the left, and a roomier turn panel and role tiles centred beside it. */
+@media (orientation: landscape) and (min-height: 601px) {
+  .wrap.game {
+    max-width: 1680px;
+    grid-template-columns: minmax(0, 1fr) clamp(320px, 30vw, 520px);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: clamp(28px, 4vw, 80px); row-gap: 16px;
+    padding-block: max(24px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-bottom, 0px));
+  }
+  /* Turn panel just above the middle of the screen, roles just below it. */
+  .game .g-side { align-self: end; gap: 12px; }
+  .game .g-extra { align-self: start; max-height: 100%; }
+  .game .stat b { font-size: 1.5rem; }
+  .game .stat .label { font-size: .85rem; }
+  .game .iconbtn.cog { width: 52px; height: 52px; font-size: 1.4rem; }
+  .game .turn { padding: 14px 22px 18px; row-gap: 4px; }
+  .game .turn > .label { font-size: .8rem; }
+  .game .turn .now { font-size: clamp(2.4rem, 6vh, 4.2rem); }
+  .game .turn .next { font-size: 1.15rem; }
+  .powers { gap: 10px; }
+  .dictator-bar { padding: 12px; gap: 10px; border-radius: 16px; }
+  .dictator-bar .who .label { font-size: .78rem; }
+  .dictator-bar .who b { font-size: 1.15rem; }
+  .dictator-bar .btn.small { min-height: 42px; font-size: 1rem; }
+  .mates-line { font-size: 1.05rem; }
+
+  /* Pop-up cards grow with the screen so they read from the sofa. */
+  .sheet { max-width: 980px; padding: 24px 28px; }
+  .sheet.rv .reveal { width: calc(min(62dvh, 600px) * 5 / 7); }
+  .sheet.rv .reveal .face { height: min(62dvh, 600px); }
+  .sheet.rv .reveal h2 { font-size: clamp(2rem, 6vh, 3.2rem); }
+  .sheet.rv.busy .reveal { width: calc(min(50dvh, 460px) * 5 / 7); }
+  .sheet.rv.busy .reveal .face { height: min(50dvh, 460px); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before { animation: none !important; transition: none !important; }
@@ -589,6 +607,133 @@ function load(data) {
 }
 function player(id) { return S.players.find(p => p.id === id) || { name: "?" }; }
 function cur() { const g = S.game; return g.order[g.cur]; }
+
+// ===== ui/sound.js =====
+// ---------- Sound & effects ----------
+// Every sound is synthesised with Web Audio, so nothing needs downloading and it works offline.
+const SFX = (() => {
+  let ctx = null;
+  const isOn = () => { try { return localStorage.getItem("rof.sound") !== "off"; } catch (e) { return true; } };
+  function ac() {
+    if (!ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; ctx = new C(); }
+    if (ctx.state === "suspended") ctx.resume();
+    return ctx;
+  }
+  function tone(freq, dur, o) {
+    o = o || {}; const c = ac(); if (!c) return;
+    const t = c.currentTime + (o.at || 0), osc = c.createOscillator(), g = c.createGain();
+    osc.type = o.type || "sine"; osc.frequency.setValueAtTime(freq, t);
+    if (o.slide) osc.frequency.exponentialRampToValueAtTime(Math.max(30, freq + o.slide), t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(o.vol || 0.2, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g).connect(c.destination); osc.start(t); osc.stop(t + dur + 0.02);
+  }
+  function noise(dur, o) {
+    o = o || {}; const c = ac(); if (!c) return;
+    const t = c.currentTime + (o.at || 0), len = Math.floor(c.sampleRate * dur), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    src.buffer = buf; f.type = "bandpass"; f.frequency.value = o.freq || 2500; f.Q.value = o.q || 1; g.gain.value = o.vol || 0.25;
+    src.connect(f).connect(g).connect(c.destination); src.start(t);
+  }
+  const sounds = {
+    flip() { noise(0.12, { freq: 3200, q: 0.8, vol: 0.35 }); tone(520, 0.08, { type: "triangle", vol: 0.08, at: 0.05 }); },
+    tap() { tone(660, 0.05, { type: "triangle", vol: 0.08 }); },
+    sip() { tone(880, 0.09, { vol: 0.12 }); tone(1320, 0.12, { vol: 0.08, at: 0.06 }); },
+    shot() { tone(220, 0.25, { type: "sawtooth", vol: 0.1, slide: -120 }); noise(0.15, { freq: 600, vol: 0.2 }); },
+    dice() { for (let i = 0; i < 9; i++) noise(0.03, { freq: 1800 + Math.random() * 1500, vol: 0.3, at: i * 0.11 + Math.random() * 0.03 }); },
+    win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.22, { type: "triangle", vol: 0.14, at: i * 0.11 })); },
+    lose() { [392, 330, 262].forEach((f, i) => tone(f, 0.28, { type: "sawtooth", vol: 0.07, at: i * 0.16 })); },
+    crown() { [392, 523, 659, 784].forEach((f, i) => tone(f, 0.3, { type: "square", vol: 0.06, at: i * 0.09 })); },
+    creak() { tone(150, 0.7, { type: "sawtooth", vol: 0.035, slide: 90 }); tone(230, 0.5, { type: "sawtooth", vol: 0.025, slide: -60, at: 0.25 }); },
+    trapdoor() { tone(110, 0.45, { type: "square", vol: 0.09, slide: -70, at: 0.5 }); noise(0.3, { freq: 280, vol: 0.4, at: 0.55 }); },
+    gallop() { [0, 0.09, 0.22, 0.31].forEach(a => noise(0.04, { freq: 900, q: 2, vol: 0.45, at: a })); },
+    back() { tone(300, 0.22, { type: "triangle", vol: 0.12, slide: -150, at: 0.25 }); },
+    tick() { tone(1250, 0.035, { type: "square", vol: 0.07 }); tone(950, 0.035, { type: "square", vol: 0.06, at: 0.13 }); },
+    fuse() { noise(0.7, { freq: 5200, q: 0.5, vol: 0.14 }); },
+    boom() { noise(1.4, { freq: 160, q: 0.4, vol: 1 }); noise(0.5, { freq: 900, q: 0.6, vol: 0.5 }); tone(110, 1, { type: "sawtooth", vol: 0.22, slide: -80 }); },
+    whistle() { tone(1800, 0.35, { vol: 0.1, slide: 400 }); }
+  };
+  return {
+    play(n) { if (!isOn()) return; try { if (sounds[n]) sounds[n](); } catch (e) {} },
+    isOn,
+    toggle() { const v = !isOn(); try { localStorage.setItem("rof.sound", v ? "on" : "off"); } catch (e) {} if (v) sounds.tap(); return v; }
+  };
+})();
+function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
+const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// ===== ui/effects.js =====
+function toast(msg) {
+  const old = document.querySelector(".toast"); if (old) old.remove();
+  const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2300);
+}
+// Big reminder when a mate has to drink along: "Bob, drink with your mate Ann!"
+function matePop(es) {
+  const old = document.querySelector(".mate-pop"); if (old) old.remove();
+  if (!es.length) return;
+  const amt = e => e.kind === "sip" ? "+" + e.n : e.kind === "shot" ? "shot" : "finish";
+  const lines = es.slice(0, 3).map(e => `<div class="mp-line"><span><b>${esc(player(e.pid).name)}</b>, drink with your mate <b>${esc(e.reason.slice(8))}</b>!</span><span class="mp-n">${amt(e)}</span></div>`);
+  if (es.length > 3) lines.push(`<div class="mp-line">+${es.length - 3} more mates drink too</div>`);
+  const t = document.createElement("div"); t.className = "mate-pop"; t.setAttribute("role", "alert");
+  t.innerHTML = `<span class="mp-ico" aria-hidden="true">🍻</span><div>${lines.join("")}</div>`;
+  t.onclick = () => t.remove();
+  document.body.appendChild(t); setTimeout(() => t.remove(), 4200);
+  buzz([60, 60, 60]);
+}
+// Summarise drinks logged since a point in the log, e.g. "Player 2 +2 · Player 3 +1".
+function toastSince(from) {
+  const g = S.game; if (!g) return;
+  const m = {}; g.log.slice(from).forEach(e => { const k = e.pid; m[k] = m[k] || { sip: 0, big: [] }; if (e.kind === "sip") m[k].sip += e.n; else m[k].big.push(e.kind === "shot" ? "shot" : "finish"); });
+  const parts = Object.entries(m).map(([pid, v]) => player(pid).name + " " + [v.sip ? "+" + v.sip : "", ...v.big].filter(Boolean).join(" "));
+  if (!parts.length) return;
+  toast(parts.length > 3 ? `Logged drinks for ${parts.length} players` : parts.join(" · "));
+  matePop(g.log.slice(from).filter(e => e.reason.startsWith("Mate of ")));
+  SFX.play(g.log.slice(from).some(e => e.kind !== "sip") ? "shot" : "sip");
+}
+
+function confetti() {
+  if (reduceMotion()) return;
+  const cv = document.createElement("canvas"); cv.className = "confetti";
+  const dpr = window.devicePixelRatio || 1; cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+  document.body.appendChild(cv);
+  const c = cv.getContext("2d"); c.scale(dpr, dpr);
+  const css = getComputedStyle(document.documentElement);
+  const cols = ["--gold", "--flame", "--card", "--suit-red"].map(v => css.getPropertyValue(v).trim() || "#f2b33d");
+  const parts = Array.from({ length: 140 }, () => ({
+    x: innerWidth / 2 + (Math.random() - 0.5) * 80, y: innerHeight * 0.45,
+    vx: (Math.random() - 0.5) * 14, vy: -6 - Math.random() * 10, r: 4 + Math.random() * 5,
+    a: Math.random() * 6, va: (Math.random() - 0.5) * 0.4, col: cols[Math.floor(Math.random() * cols.length)]
+  }));
+  const t0 = performance.now();
+  (function frame(now) {
+    const el = now - t0;
+    c.clearRect(0, 0, innerWidth, innerHeight);
+    parts.forEach(p => {
+      p.vy += 0.35; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.a += p.va;
+      c.save(); c.translate(p.x, p.y); c.rotate(p.a); c.globalAlpha = Math.max(0, 1 - el / 1800);
+      c.fillStyle = p.col; c.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); c.restore();
+    });
+    if (el < 1800) requestAnimationFrame(frame); else cv.remove();
+  })(t0);
+}
+
+// Slide horses from where they were to where they are after each re-render.
+function flipAnimate(before) {
+  if (reduceMotion() || !before) return;
+  document.querySelectorAll("[data-flip]").forEach(el => {
+    const old = before[el.dataset.flip]; if (!old) return;
+    const now = el.getBoundingClientRect(), dx = old.left - now.left, dy = old.top - now.top;
+    if (Math.abs(dx) + Math.abs(dy) < 1) return;
+    el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], { duration: 380, easing: "cubic-bezier(.2,.8,.2,1)" });
+  });
+}
+
+// White flash when the bomb goes off.
+function flash() {
+  if (reduceMotion()) return;
+  const f = document.createElement("div"); f.className = "flash"; document.body.appendChild(f); setTimeout(() => f.remove(), 750);
+}
 
 // ===== minigames/bomb/logic.js =====
 // ---------- The Bomb ----------
@@ -1055,133 +1200,6 @@ function fmtTotals(t) {
   if (t.shot) parts.push(t.shot + (t.shot === 1 ? " shot" : " shots"));
   if (t.finish) parts.push(t.finish + (t.finish === 1 ? " drink finished" : " drinks finished"));
   return parts.join(" · ");
-}
-
-// ===== ui/sound.js =====
-// ---------- Sound & effects ----------
-// Every sound is synthesised with Web Audio, so nothing needs downloading and it works offline.
-const SFX = (() => {
-  let ctx = null;
-  const isOn = () => { try { return localStorage.getItem("rof.sound") !== "off"; } catch (e) { return true; } };
-  function ac() {
-    if (!ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; ctx = new C(); }
-    if (ctx.state === "suspended") ctx.resume();
-    return ctx;
-  }
-  function tone(freq, dur, o) {
-    o = o || {}; const c = ac(); if (!c) return;
-    const t = c.currentTime + (o.at || 0), osc = c.createOscillator(), g = c.createGain();
-    osc.type = o.type || "sine"; osc.frequency.setValueAtTime(freq, t);
-    if (o.slide) osc.frequency.exponentialRampToValueAtTime(Math.max(30, freq + o.slide), t + dur);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(o.vol || 0.2, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    osc.connect(g).connect(c.destination); osc.start(t); osc.stop(t + dur + 0.02);
-  }
-  function noise(dur, o) {
-    o = o || {}; const c = ac(); if (!c) return;
-    const t = c.currentTime + (o.at || 0), len = Math.floor(c.sampleRate * dur), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
-    const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
-    src.buffer = buf; f.type = "bandpass"; f.frequency.value = o.freq || 2500; f.Q.value = o.q || 1; g.gain.value = o.vol || 0.25;
-    src.connect(f).connect(g).connect(c.destination); src.start(t);
-  }
-  const sounds = {
-    flip() { noise(0.12, { freq: 3200, q: 0.8, vol: 0.35 }); tone(520, 0.08, { type: "triangle", vol: 0.08, at: 0.05 }); },
-    tap() { tone(660, 0.05, { type: "triangle", vol: 0.08 }); },
-    sip() { tone(880, 0.09, { vol: 0.12 }); tone(1320, 0.12, { vol: 0.08, at: 0.06 }); },
-    shot() { tone(220, 0.25, { type: "sawtooth", vol: 0.1, slide: -120 }); noise(0.15, { freq: 600, vol: 0.2 }); },
-    dice() { for (let i = 0; i < 9; i++) noise(0.03, { freq: 1800 + Math.random() * 1500, vol: 0.3, at: i * 0.11 + Math.random() * 0.03 }); },
-    win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.22, { type: "triangle", vol: 0.14, at: i * 0.11 })); },
-    lose() { [392, 330, 262].forEach((f, i) => tone(f, 0.28, { type: "sawtooth", vol: 0.07, at: i * 0.16 })); },
-    crown() { [392, 523, 659, 784].forEach((f, i) => tone(f, 0.3, { type: "square", vol: 0.06, at: i * 0.09 })); },
-    creak() { tone(150, 0.7, { type: "sawtooth", vol: 0.035, slide: 90 }); tone(230, 0.5, { type: "sawtooth", vol: 0.025, slide: -60, at: 0.25 }); },
-    trapdoor() { tone(110, 0.45, { type: "square", vol: 0.09, slide: -70, at: 0.5 }); noise(0.3, { freq: 280, vol: 0.4, at: 0.55 }); },
-    gallop() { [0, 0.09, 0.22, 0.31].forEach(a => noise(0.04, { freq: 900, q: 2, vol: 0.45, at: a })); },
-    back() { tone(300, 0.22, { type: "triangle", vol: 0.12, slide: -150, at: 0.25 }); },
-    tick() { tone(1250, 0.035, { type: "square", vol: 0.07 }); tone(950, 0.035, { type: "square", vol: 0.06, at: 0.13 }); },
-    fuse() { noise(0.7, { freq: 5200, q: 0.5, vol: 0.14 }); },
-    boom() { noise(1.4, { freq: 160, q: 0.4, vol: 1 }); noise(0.5, { freq: 900, q: 0.6, vol: 0.5 }); tone(110, 1, { type: "sawtooth", vol: 0.22, slide: -80 }); },
-    whistle() { tone(1800, 0.35, { vol: 0.1, slide: 400 }); }
-  };
-  return {
-    play(n) { if (!isOn()) return; try { if (sounds[n]) sounds[n](); } catch (e) {} },
-    isOn,
-    toggle() { const v = !isOn(); try { localStorage.setItem("rof.sound", v ? "on" : "off"); } catch (e) {} if (v) sounds.tap(); return v; }
-  };
-})();
-function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
-const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-// ===== ui/effects.js =====
-function toast(msg) {
-  const old = document.querySelector(".toast"); if (old) old.remove();
-  const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = msg;
-  document.body.appendChild(t); setTimeout(() => t.remove(), 2300);
-}
-// Big reminder when a mate has to drink along: "Bob, drink with your mate Ann!"
-function matePop(es) {
-  const old = document.querySelector(".mate-pop"); if (old) old.remove();
-  if (!es.length) return;
-  const amt = e => e.kind === "sip" ? "+" + e.n : e.kind === "shot" ? "shot" : "finish";
-  const lines = es.slice(0, 3).map(e => `<div class="mp-line"><span><b>${esc(player(e.pid).name)}</b>, drink with your mate <b>${esc(e.reason.slice(8))}</b>!</span><span class="mp-n">${amt(e)}</span></div>`);
-  if (es.length > 3) lines.push(`<div class="mp-line">+${es.length - 3} more mates drink too</div>`);
-  const t = document.createElement("div"); t.className = "mate-pop"; t.setAttribute("role", "alert");
-  t.innerHTML = `<span class="mp-ico" aria-hidden="true">🍻</span><div>${lines.join("")}</div>`;
-  t.onclick = () => t.remove();
-  document.body.appendChild(t); setTimeout(() => t.remove(), 4200);
-  buzz([60, 60, 60]);
-}
-// Summarise drinks logged since a point in the log, e.g. "Player 2 +2 · Player 3 +1".
-function toastSince(from) {
-  const g = S.game; if (!g) return;
-  const m = {}; g.log.slice(from).forEach(e => { const k = e.pid; m[k] = m[k] || { sip: 0, big: [] }; if (e.kind === "sip") m[k].sip += e.n; else m[k].big.push(e.kind === "shot" ? "shot" : "finish"); });
-  const parts = Object.entries(m).map(([pid, v]) => player(pid).name + " " + [v.sip ? "+" + v.sip : "", ...v.big].filter(Boolean).join(" "));
-  if (!parts.length) return;
-  toast(parts.length > 3 ? `Logged drinks for ${parts.length} players` : parts.join(" · "));
-  matePop(g.log.slice(from).filter(e => e.reason.startsWith("Mate of ")));
-  SFX.play(g.log.slice(from).some(e => e.kind !== "sip") ? "shot" : "sip");
-}
-
-function confetti() {
-  if (reduceMotion()) return;
-  const cv = document.createElement("canvas"); cv.className = "confetti";
-  const dpr = window.devicePixelRatio || 1; cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
-  document.body.appendChild(cv);
-  const c = cv.getContext("2d"); c.scale(dpr, dpr);
-  const css = getComputedStyle(document.documentElement);
-  const cols = ["--gold", "--flame", "--card", "--suit-red"].map(v => css.getPropertyValue(v).trim() || "#f2b33d");
-  const parts = Array.from({ length: 140 }, () => ({
-    x: innerWidth / 2 + (Math.random() - 0.5) * 80, y: innerHeight * 0.45,
-    vx: (Math.random() - 0.5) * 14, vy: -6 - Math.random() * 10, r: 4 + Math.random() * 5,
-    a: Math.random() * 6, va: (Math.random() - 0.5) * 0.4, col: cols[Math.floor(Math.random() * cols.length)]
-  }));
-  const t0 = performance.now();
-  (function frame(now) {
-    const el = now - t0;
-    c.clearRect(0, 0, innerWidth, innerHeight);
-    parts.forEach(p => {
-      p.vy += 0.35; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.a += p.va;
-      c.save(); c.translate(p.x, p.y); c.rotate(p.a); c.globalAlpha = Math.max(0, 1 - el / 1800);
-      c.fillStyle = p.col; c.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); c.restore();
-    });
-    if (el < 1800) requestAnimationFrame(frame); else cv.remove();
-  })(t0);
-}
-
-// Slide horses from where they were to where they are after each re-render.
-function flipAnimate(before) {
-  if (reduceMotion() || !before) return;
-  document.querySelectorAll("[data-flip]").forEach(el => {
-    const old = before[el.dataset.flip]; if (!old) return;
-    const now = el.getBoundingClientRect(), dx = old.left - now.left, dy = old.top - now.top;
-    if (Math.abs(dx) + Math.abs(dy) < 1) return;
-    el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], { duration: 380, easing: "cubic-bezier(.2,.8,.2,1)" });
-  });
-}
-
-// White flash when the bomb goes off.
-function flash() {
-  if (reduceMotion()) return;
-  const f = document.createElement("div"); f.className = "flash"; document.body.appendChild(f); setTimeout(() => f.remove(), 750);
 }
 
 // ===== ui/sheets.js =====
@@ -1905,15 +1923,13 @@ function viewGame() {
     powers.push(bar("House rule", esc(ruleLabel(i)), `<button class="btn small" data-act="penalty" data-k="rule:${i}">Broke it</button>`)));
   const mates = Object.entries(g.mates || {});
   if (mates.length) powers.push(`<div class="mates-line"><span class="label">Mates</span> ${mates.map(([a, b]) => `${esc(player(a).name)} &amp; ${esc(player(b).name)}`).join(" &middot; ")}</div>`);
-  const dict = !powers.length ? "" : LAYOUT === "c" && powers.length > 2
-    ? `<div class="powers">${powers[0]}${fold("powers", `More roles &amp; rules (${powers.length - 1})`, powers.slice(1).join(""))}</div>`
-    : `<div class="powers">${powers.join("")}</div>`;
+  const dict = powers.length ? `<div class="powers">${powers.join("")}</div>` : "";
   let middle;
   const cards = g.deck.map((c, i) => `<button class="rc ${c.drawn ? "drawn" : ""}" data-act="draw" data-id="${c.id}" data-i="${i}" aria-label="Draw card ${i + 1}" ${c.drawn ? "tabindex='-1'" : ""}></button>`).join("");
   middle = `<div class="ring" id="ring">${cards}
     <button class="cup" data-act="random" aria-label="Draw a random card for me"><span class="kings">${cardsLeft()}</span><small>tap to draw</small></button>
   </div>`;
-  return `<div class="wrap game lay-${LAYOUT}">
+  return `<div class="wrap game">
     <div class="g-side">
     <div class="topbar">
       <div class="stats">
@@ -1931,11 +1947,14 @@ function viewGame() {
   </div>`;
 }
 
+// The ring is the biggest circle that fits its area, whatever the screen. Cards sit on a circle at 38% of its size.
 function layoutRing() {
   const ring = $("#ring");
   if (!ring) return;
-  if (ringObs && ringSeen !== ring) { ringObs.disconnect(); ringObs.observe(ring); ringSeen = ring; }
-  const size = ring.clientWidth;
+  const area = ring.parentElement;
+  if (ringObs && ringSeen !== area) { ringObs.disconnect(); ringObs.observe(area); ringSeen = area; }
+  const size = Math.max(120, Math.floor(Math.min(area.clientWidth, area.clientHeight)));
+  ring.style.setProperty("--ring-size", size + "px");
   const R = size * 0.38, w = Math.max(18, size * 0.085), h = size * 0.19;
   ring.querySelectorAll(".rc").forEach(el => {
     const i = +el.dataset.i, c = S.game.deck[i];
@@ -1945,7 +1964,7 @@ function layoutRing() {
   });
 }
 window.addEventListener("resize", () => { if (S.screen === "game") layoutRing(); });
-// iOS reports the size before a rotation has settled, so also watch the ring's own box.
+// iOS reports the size before a rotation has settled, so also watch the ring's area itself.
 let ringSeen = null;
 const ringObs = "ResizeObserver" in window ? new ResizeObserver(() => { if (S.screen === "game") layoutRing(); }) : null;
 window.addEventListener("orientationchange", () => setTimeout(() => { if (S.screen === "game") layoutRing(); }, 350));
@@ -2022,7 +2041,6 @@ function viewRules() {
 }
 
 // ===== ui/render.js =====
-const LAYOUT = "b";
 function $(sel, root) { return (root || document).querySelector(sel); }
 // ---------- Rendering ----------
 const app = $("#app");

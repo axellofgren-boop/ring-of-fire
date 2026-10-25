@@ -305,8 +305,8 @@ textarea.field { resize: vertical; min-height: 64px; }
 .door-tag { font-size: .72rem; font-weight: 800; background: var(--card); color: var(--ink); border-radius: 999px; padding: 2px 7px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .door-tag.out { background: var(--bad); text-decoration: line-through; }
 .door-tag.in { background: var(--good); }
-.chip.done { border-color: var(--good); }
-.chip.gone { opacity: .45; text-decoration: line-through; }
+.door-turn { text-align: center; display: grid; gap: 2px; }
+.door-turn b { font-family: var(--f-display); font-weight: 400; font-size: clamp(1.8rem, 9vw, 2.6rem); color: var(--fg); line-height: 1.1; overflow-wrap: anywhere; }
 .victims { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .victims .btn { min-height: 52px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -1190,18 +1190,16 @@ textarea.field { resize: vertical; min-height: 64px; }
     d.round += 1;
     const n = 2 + Math.floor(Math.random() * 4), safe = 1 + Math.floor(Math.random() * (n - 1));
     d.safe = shuffle(Array.from({ length: n }, (_, i) => i < safe));
-    d.picks = {}; d.sel = null; d.out = []; d.wipe = false; d.phase = "pick";
+    d.picks = {}; d.out = []; d.wipe = false; d.phase = "pick";
   }
-  const doorPicker = d => d.sel || d.alive.find(pid => d.picks[pid] == null) || null;
+  // Players pick in the order they were set up; the doors open as soon as the last one has picked.
+  const doorPicker = d => d.alive.find(pid => d.picks[pid] == null) || null;
 
   function doorAct(act, el) {
     const d = S.game.door, id = el.dataset.id, logFrom = S.game.log.length;
     if (!d) return;
-    if (act === "dr-sel" && d.phase === "pick") d.sel = id;
-    if (act === "dr-door" && d.phase === "pick") { const p = doorPicker(d); if (p) { d.picks[p] = +el.dataset.k; d.sel = null; SFX.play("tap"); } }
-    if (act === "dr-rand" && d.phase === "pick") d.alive.forEach(pid => { if (d.picks[pid] == null) d.picks[pid] = Math.floor(Math.random() * d.safe.length); });
-    if (act === "dr-trap") d.trap = +el.dataset.k;
-    if (act === "dr-open" && d.phase === "pick" && d.alive.every(pid => d.picks[pid] != null)) {
+    if (act === "dr-door" && d.phase === "pick") { const p = doorPicker(d); if (p) { d.picks[p] = +el.dataset.k; SFX.play("tap"); } }
+    if (act === "dr-door" && d.phase === "pick" && !doorPicker(d)) {
       d.out = d.alive.filter(pid => !d.safe[d.picks[pid]]);
       // If every door someone chose was a trap, nobody is out and the round replays.
       d.wipe = d.out.length === d.alive.length;
@@ -1242,31 +1240,22 @@ textarea.field { resize: vertical; min-height: 64px; }
     ui.doorAnim = false;
     const doors = d.safe.map((safe, i) => {
       const who = Object.keys(d.picks).filter(pid => d.picks[pid] === i);
-      const tags = who.map(pid => `<span class="door-tag ${reveal ? (safe ? "in" : "out") : ""}">${nm(pid)}</span>`).join("");
-      return `<button class="door-slot ${picker && d.picks[picker] === i ? "mine" : ""}" data-act="dr-door" data-k="${i}" ${reveal ? "disabled" : ""} aria-label="Door ${i + 1}">
+      const tags = !reveal ? "" : who.map(pid => `<span class="door-tag ${reveal ? (safe ? "in" : "out") : ""}">${nm(pid)}</span>`).join("");
+      return `<button class="door-slot" data-act="dr-door" data-k="${i}" ${reveal ? "disabled" : ""} aria-label="Door ${i + 1}">
         <div class="door-frame ${reveal ? (safe ? "safe" : "trap") : ""} ${anim && !safe ? "anim" : ""}" ${anim && !safe ? `style="animation-delay:${1 + i * 0.2}s"` : ""}>
           <div class="door-behind">${reveal ? (safe ? "<b>✓</b><span>SAFE</span>" : "<b>☠</b><span>TRAP</span>") : ""}</div>
           <div class="door-leaf ${reveal ? "open" : ""} ${anim ? "anim" : ""}" ${anim ? `style="animation-delay:${i * 0.2}s"` : ""}><span class="door-num">${i + 1}</span><i class="knob"></i></div>
         </div>
-        <div class="door-tags">${tags}</div>
+        ${reveal ? `<div class="door-tags">${tags}</div>` : ""}
       </button>`;
     }).join("");
-    const gone = S.game.order.filter(pid => !d.alive.includes(pid) && !(reveal && d.out.includes(pid)));
     const head = `<div class="row" style="justify-content:space-between"><span class="label">Round ${d.round} · ${d.safe.length} doors</span><span class="label">${d.alive.length} still in</span></div>
       <div class="door-row" style="--n:${d.safe.length}">${doors}</div>`;
     if (!reveal) {
-      const all = d.alive.every(pid => d.picks[pid] != null);
-      const chips = d.alive.map(pid => `<button class="chip ${d.picks[pid] != null ? "done" : ""}" data-act="dr-sel" data-id="${pid}" aria-pressed="${pid === picker}">${nm(pid)}${d.picks[pid] != null ? " · " + (d.picks[pid] + 1) : ""}</button>`).join("")
-        + gone.map(pid => `<span class="chip gone">${nm(pid)}</span>`).join("");
-      return `<section class="panel">${head}
-          <div class="callout race-msg" aria-live="polite">${all ? "Everyone has chosen. No backing out now." : `<b>${nm(picker)}</b>, choose a door.`} <span class="muted">At least one door is safe. The rest are traps.</span></div>
-          <div class="chips">${chips}</div>
-        </section>
-        ${d.round === 1 ? `<section class="panel"><span class="label">Fall through a trap door</span>
-          <div class="chips">${[0, 1, 2].map(n => `<button class="chip" data-act="dr-trap" data-k="${n}" aria-pressed="${d.trap === n}">${n ? `Drink ${n} ${n === 1 ? "sip" : "sips"}` : "No sips, just out"}</button>`).join("")}</div></section>` : ""}
-        <button class="btn fire wide" data-act="dr-open" ${all ? "" : "disabled"} style="min-height:56px">${all ? "Open the doors!" : "Waiting for everyone to choose"}</button>
-        ${all ? "" : `<button class="btn ghost wide" data-act="dr-rand">Random doors for the rest</button>`}
-        ${d.round === 1 ? `<button class="btn ghost wide" data-act="mini-done">Skip The Door</button>` : ""}`;
+      const done = d.alive.filter(pid => d.picks[pid] != null).length;
+      return `<div class="door-turn" aria-live="polite"><span class="label">Pick ${done + 1} of ${d.alive.length}</span><b>${nm(picker)}</b><span class="muted">tap a door</span></div>
+        <section class="panel">${head}</section>
+        ${d.round === 1 && !done ? `<button class="btn ghost wide" data-act="mini-done">Skip The Door</button>` : ""}`;
     }
     const sips = d.trap && d.out.length ? ` ${d.trap === 1 ? "A sip" : d.trap + " sips"} each for falling in.` : "";
     const msg = d.wipe ? `Every door you picked was a trap! Nobody is out.${sips} Fresh doors.`

@@ -90,7 +90,6 @@ h2 { font-size: 1.35rem; }
 }
 .mode b { font-family: var(--f-display); font-weight: 400; font-size: 1.05rem; }
 .mode span { font-size: .85rem; color: var(--muted); }
-.mode.full { width: 100%; }
 .solo-cog { position: fixed; z-index: 5; top: max(12px, env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); }
 .mode[aria-pressed="true"] { border-color: var(--gold); background: var(--surface-2); box-shadow: 0 0 0 3px rgba(242,179,61,.18); }
 .panel { background: var(--surface); border-radius: 18px; padding: 16px; display: grid; gap: 12px; }
@@ -469,7 +468,8 @@ textarea.field { resize: vertical; min-height: 64px; }
   const MINI_GAMES = ["Horse Race", "The Bomb", "The Door", "The Impostor"];
   let S = {
     screen: "setup",
-    pick: [], // mini-games ticked to play on their own; empty means the full Ring of Fire
+    pick: [], // mini-games ticked to play on their own
+    minis: false, // the start screen's mini-games-only panel is open
     players: [{ id: uid(), name: "Player 1" }, { id: uid(), name: "Player 2" }, { id: uid(), name: "Player 3" }, { id: uid(), name: "Player 4" }],
     rules: clone(DEFAULT_RULES),
     freq: 13,
@@ -497,6 +497,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       if (MINI_GAMES.includes(S.mode)) S.pick = [S.mode];
       delete S.mode;
       S.pick = (S.pick || []).filter(m => MINI_GAMES.includes(m));
+      if (S.pick.length) S.minis = true;
       if (S.game && typeof S.game.solo === "string") S.game.solo = [S.game.solo];
       if (S.game && S.game.mode === "physical") { S.game = null; S.screen = "setup"; } // the physical deck is gone
       if (S.game && S.game.miniQueue) MINI_GAMES.forEach(m => { if (!S.game.miniQueue.includes(m)) S.game.miniQueue.push(m); });
@@ -863,9 +864,10 @@ textarea.field { resize: vertical; min-height: 64px; }
         <button class="iconbtn" data-act="down" data-id="${p.id}" aria-label="Move down" ${i === S.players.length - 1 ? "disabled" : ""}>&darr;</button>
         <button class="iconbtn" data-act="rm" data-id="${p.id}" aria-label="Remove player">&times;</button>
       </div>`).join("");
-    const pick = S.pick, solo = pick.length > 0;
+    const solo = !!S.minis, pick = solo ? S.pick : [];
     const need = pick.includes("The Impostor") ? 3 : 2;
-    const can = S.players.filter(p => p.name.trim()).length >= need;
+    const enough = S.players.filter(p => p.name.trim()).length >= need;
+    const can = enough && (!solo || pick.length > 0);
     const blurb = { "Horse Race": "Bet sips on a suit and race the Aces.", "The Bomb": "Pass it round until it blows.", "The Door": "Pick a door. Dodge the trap.", "The Impostor": "Find who doesn't know the word. 3+ players." };
     const soloBtns = MINI_GAMES.map(m => `<button class="mode" data-act="mini-pick" data-k="${esc(m)}" aria-pressed="${pick.includes(m)}"><b>${esc(m)}</b><span>${blurb[m] || ""}</span></button>`).join("");
     const freqOpts = FREQ_CHOICES
@@ -877,19 +879,18 @@ textarea.field { resize: vertical; min-height: 64px; }
         <p>Set the crew, pick your game, and the app keeps score of every sip.</p>
       </header>
       ${S.game && !S.game.over && S.game.log ? `<div class="banner"><span>A game is in progress.</span><button class="btn small primary" data-act="resume">Resume game</button></div>` : ""}
-      <section class="stack">
-        <span class="label">Game</span>
-        <button class="mode full" data-act="mode" data-mode="ring" aria-pressed="${!solo}"><b>Ring of Fire</b><span>The full game: 52 cards, house rules and surprise mini-games.</span></button>
-        <span class="label">Or just mini-games · tick one or more</span>
-        <div class="modes">${soloBtns}</div>
-      </section>
       <section class="panel">
         <div class="row" style="justify-content:space-between"><h2>Players</h2><button class="btn small ghost" data-act="shuffle">Shuffle order</button></div>
         <span class="muted" style="font-size:.9rem">Turns go top to bottom. Use the arrows to change the order.</span>
         <div class="stack">${rows}</div>
         <button class="btn ghost" data-act="add">+ Add player</button>
       </section>
-      ${solo ? "" : `<section class="panel">
+      ${solo ? `<section class="panel">
+        <h2>Mini-games only</h2>
+        <span class="muted" style="font-size:.9rem">No cards, just mini-games. Tick one or more and they take turns in a random order.</span>
+        <div class="modes">${soloBtns}</div>
+        <button class="btn ghost" data-act="mode">Back to Ring of Fire</button>
+      </section>` : `<section class="panel">
         <h2>House rules</h2>
         <label class="stack" for="freq"><span class="label">Mini-game</span>
           <select class="field" id="freq">${freqOpts}</select>
@@ -897,8 +898,9 @@ textarea.field { resize: vertical; min-height: 64px; }
         <span class="muted" style="font-size:.9rem">Mini-games in the mix: ${S.miniGames.map(esc).join(", ")}. More coming.</span>
         <button class="btn ghost" data-act="rules">Edit card rules</button>
       </section>`}
-      <button class="btn fire wide" data-act="start" ${can ? "" : "disabled"} style="font-size:1.1rem;min-height:56px">${!solo ? "Start the fire" : pick.length === 1 ? "Play " + esc(pick[0]) : `Play ${pick.length} mini-games`}</button>
-      ${can ? "" : `<span class="muted" style="text-align:center">${need === 3 ? "The Impostor needs at least 3 players." : "Add at least 2 players."}</span>`}
+      <button class="btn fire wide" data-act="start" ${can ? "" : "disabled"} style="font-size:1.1rem;min-height:56px">${!solo ? "Start the fire" : !pick.length ? "Tick a mini-game" : pick.length === 1 ? "Play " + esc(pick[0]) : `Play ${pick.length} mini-games`}</button>
+      ${enough ? "" : `<span class="muted" style="text-align:center">${need === 3 ? "The Impostor needs at least 3 players." : "Add at least 2 players."}</span>`}
+      ${solo ? "" : `<button class="btn ghost wide" data-act="minis-open">Just play mini-games</button>`}
     </div>`;
   }
 
@@ -1921,7 +1923,8 @@ textarea.field { resize: vertical; min-height: 64px; }
     const g = S.game, sh = ui.sheet;
     const idx = S.players.findIndex(p => p.id === id);
     switch (act) {
-      case "mode": S.pick = []; break;
+      case "mode": S.minis = false; break;
+      case "minis-open": S.minis = true; break;
       case "mini-pick": { const k = el.dataset.k; S.pick = S.pick.includes(k) ? S.pick.filter(m => m !== k) : MINI_GAMES.filter(m => m === k || S.pick.includes(m)); break; }
       case "add": S.players.push({ id: uid(), name: "" }); save(); render(); { const ins = app.querySelectorAll("[data-name]"); ins[ins.length - 1].focus(); } return;
       case "rm": if (idx > -1) S.players.splice(idx, 1); break;
@@ -1933,7 +1936,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       case "rules-reset":
         if (ui.resetArmed) { S.rules = clone(DEFAULT_RULES); ui.resetArmed = false; } else ui.resetArmed = true;
         break;
-      case "start": startGame(S.pick.length ? S.pick : null); return;
+      case "start": startGame(S.minis && S.pick.length ? S.pick : null); return;
       case "resume": S.screen = S.game.endedAt ? "end" : S.game.solo ? "mini" : "game"; wakeLock(); break;
       case "draw": {
         if (ui.pulling) return;

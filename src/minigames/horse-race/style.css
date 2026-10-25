@@ -1,0 +1,27 @@
+/* Horse Race */
+.red-suit { color: var(--suit-red); }
+.bet { background: var(--bg); border-radius: 14px; padding: 10px; display: grid; gap: 8px; }
+.bet-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.bet-top .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bet .n { font-family: var(--f-display); width: 28px; text-align: center; font-variant-numeric: tabular-nums; }
+.suits { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.suitbtn { min-height: 46px; border-radius: 10px; border: 2px solid transparent; background: var(--card); color: var(--ink); font-size: 1.5rem; line-height: 1; }
+.suitbtn.red-suit { color: var(--suit-red); }
+.suitbtn[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(242,179,61,.45); }
+.suitbtn[aria-pressed="false"] { opacity: .55; }
+.track { display: grid; grid-template-columns: 46px repeat(4, minmax(0, 1fr)); gap: 4px; background: var(--surface); border-radius: 18px; padding: 10px; }
+.tk-cell { border-radius: 8px; background: var(--bg); display: grid; place-items: center; min-width: 0; }
+.tk-cell.tk-finish { background: repeating-conic-gradient(var(--fg) 0 25%, var(--surface-2) 0 50%) 0 0 / 10px 10px; }
+.tk-side { border-radius: 6px; display: grid; place-items: center; font-family: var(--f-display); font-size: .8rem; }
+.tk-side.down { background: repeating-linear-gradient(45deg, #7d1d2a 0 4px, #5c1220 4px 8px); border: 1.5px solid #f6dfb0; }
+.tk-side.up { background: var(--card); color: var(--ink); }
+.tk-side.up.red-suit { color: var(--suit-red); }
+.tk-side.tk-finish, .tk-side.tk-start { color: var(--gold); font-size: .72rem; letter-spacing: .06em; }
+.horse { background: var(--card); color: var(--ink); border-radius: 6px; font-family: var(--f-display); padding: 4px 8px; font-size: .95rem; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+.horse.red-suit { color: var(--suit-red); }
+.horse.moved { outline: 2px solid var(--gold); }
+@keyframes hop { 40% { transform: translateY(-6px); } }
+.legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; font-size: .88rem; }
+.legend .lg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.race-msg { min-height: 3.2em; }
+

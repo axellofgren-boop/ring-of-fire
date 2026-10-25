@@ -1,0 +1,11 @@
+/* Rules editor */
+.rule-ed { background: var(--surface); border-radius: 16px; padding: 12px; display: grid; gap: 8px; }
+.rule-ed .top { display: grid; grid-template-columns: 44px minmax(0,1fr); gap: 10px; align-items: center; }
+.rule-ed .badge { width: 44px; aspect-ratio: 5/7; border-radius: 6px; background: var(--card); color: var(--ink); display: grid; place-items: center; font-family: var(--f-display); }
+.rule-ed .opts { display: grid; grid-template-columns: minmax(0,1fr) 92px; gap: 8px; }
+
+.mini-hero { text-align: center; display: grid; gap: 10px; justify-items: center; padding-top: 24px; }
+.mini-hero h1 { font-size: clamp(2.2rem, 11vw, 3.2rem); color: var(--gold); line-height: 1; }
+.half-name { font-family: var(--f-display); font-size: clamp(2rem, 10vw, 3rem); line-height: 1.05; overflow-wrap: anywhere; }
+.placeholder { border: 2px dashed var(--line); border-radius: 18px; padding: 18px; display: grid; gap: 8px; }
+

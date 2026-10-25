@@ -1,0 +1,28 @@
+/* Night chart */
+.dchart { background: var(--surface); border-radius: 18px; padding: 14px 12px 10px; display: grid; gap: 10px; position: relative; }
+.dchart .legend-row { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .85rem; }
+.dchart .legend-row span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.dchart .legend-row i { width: 14px; height: 3px; border-radius: 2px; flex: none; }
+.dchart svg { width: 100%; height: auto; display: block; touch-action: pan-y; overflow: visible; }
+.dchart .grid line { stroke: var(--line); stroke-width: 1; }
+.dchart text { fill: var(--muted); font-family: var(--f-body); font-size: 11px; font-variant-numeric: tabular-nums; }
+.dchart text.dl { fill: var(--fg); font-weight: 700; font-size: 12px; }
+.dchart text.mg { fill: var(--gold); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.dchart .mgline { stroke: var(--gold); stroke-opacity: .35; stroke-dasharray: 3 4; }
+.dchart .xh { stroke: var(--fg); stroke-opacity: .5; }
+.dchart .tip {
+  position: absolute; top: 46px; pointer-events: none; z-index: 2; min-width: 150px;
+  background: var(--bg); border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 10px; font-size: .82rem;
+  box-shadow: 0 8px 20px rgba(0,0,0,.45); display: grid; gap: 3px;
+}
+.dchart .tip b { font-family: var(--f-display); font-weight: 400; color: var(--gold); }
+.dchart .tip .r { display: flex; align-items: center; gap: 8px; justify-content: space-between; font-variant-numeric: tabular-nums; }
+.dchart .tip .r span { display: inline-flex; align-items: center; gap: 6px; }
+.dchart .tip i { width: 8px; height: 8px; border-radius: 50%; }
+.dchart .note { font-size: .78rem; color: var(--muted); }
+.dchart details summary { cursor: pointer; font-size: .85rem; color: var(--muted); }
+.dchart table { width: 100%; border-collapse: collapse; font-size: .85rem; font-variant-numeric: tabular-nums; margin-top: 8px; }
+.dchart th, .dchart td { text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.dchart th:first-child, .dchart td:first-child { text-align: left; }
+
+

@@ -233,6 +233,7 @@ textarea.field { resize: vertical; min-height: 64px; }
 
 .mini-hero { text-align: center; display: grid; gap: 10px; justify-items: center; padding-top: 24px; }
 .mini-hero h1 { font-size: clamp(2.2rem, 11vw, 3.2rem); color: var(--gold); line-height: 1; }
+.half-name { font-family: var(--f-display); font-size: clamp(2rem, 10vw, 3rem); line-height: 1.05; overflow-wrap: anywhere; }
 .placeholder { border: 2px dashed var(--line); border-radius: 18px; padding: 18px; display: grid; gap: 8px; }
 
 /* Horse Race */
@@ -535,12 +536,23 @@ textarea.field { resize: vertical; min-height: 64px; }
       miniIdx: 0,
       startedAt: Date.now()
     };
+    planMinis(0);
     S.screen = "game";
     ui.sheet = null;
     wakeLock();
     save(); render();
   }
   function cardsLeft() { return S.game.deck.filter(c => !c.drawn).length; }
+  // Mini-games land on a random card near each slot (every S.freq cards, give or take a quarter of the gap), so nobody can count down to them.
+  function planMinis(from) {
+    const g = S.game, F = S.freq, spread = Math.max(1, Math.round(F / 4)), at = [];
+    if (F > 0) for (let c = F; c < 52; c += F) {
+      if (c + spread <= from) continue;
+      const t = Math.max(c + Math.round((Math.random() * 2 - 1) * spread), from + 1, at.length ? at[at.length - 1].t + 2 : 1);
+      if (t < 52) at.push({ c, t });
+    }
+    g.miniAt = at;
+  }
 
   function drawCard(id) {
     const c = S.game.deck.find(x => x.id === id);
@@ -602,10 +614,61 @@ textarea.field { resize: vertical; min-height: 64px; }
     g.cur = (g.cur + 1) % g.order.length;
     if (g.mode === "digital" && cardsLeft() === 0) { endGame(); save(); render(); return; }
     const remaining = g.mode === "digital" ? cardsLeft() : 52 - g.turn;
-    if (S.freq > 0 && g.turn % S.freq === 0 && remaining > 0 && g.miniQueue.length) {
-      enterMini();
-    }
+    if (!g.miniAt) planMinis(g.turn);
+    const miniDue = remaining > 0 && g.miniQueue.length > 0 && g.miniAt.some(m => m.t === g.turn);
+    if (g.turn === 26 && !g.halfDone && remaining > 0) enterHalf(miniDue);
+    else if (miniDue) enterMini();
     save(); render();
+  }
+
+  // ---------- Halftime ----------
+  // Whoever has drunk the least is Last. The Dictator picks their punishment, or the top drinker if nobody holds the crown.
+  const PUNISHMENTS = [["sip3", "3 sips", "sip", 3], ["sip5", "5 sips", "sip", 5], ["shot", "A shot", "shot", 1], ["finish", "Finish your drink", "finish", 1], ["custom", "Something else", null, 0]];
+  function enterHalf(thenMini) {
+    const g = S.game, b = board(), score = r => r.finish * 10 + r.shot * 5 + r.sip;
+    const low = Math.min(...b.map(score));
+    g.halfDone = true;
+    const pids = b.filter(r => score(r) === low).map(r => r.pid);
+    // A Dictator who is Last themselves doesn't get to pick their own punishment.
+    const byDictator = !!g.dictator && !pids.includes(g.dictator);
+    g.half = { pids, judge: byDictator ? g.dictator : b[0].pid, byDictator, pick: null, thenMini };
+    S.screen = "half";
+    SFX.play("whistle");
+  }
+  function finishHalf() {
+    const g = S.game, thenMini = g.half && g.half.thenMini;
+    g.half = null;
+    if (thenMini) enterMini(); else S.screen = "game";
+    save(); render();
+  }
+  function punishLast() {
+    const g = S.game, h = g.half, pun = PUNISHMENTS.find(x => x[0] === h.pick);
+    const n0 = g.log.length;
+    if (pun[2]) h.pids.forEach(pid => logDrink(pid, pun[2], pun[3], "Halftime: last place"));
+    ev("half", { pids: h.pids, judge: h.judge, what: pun[2] ? pun[1].toLowerCase() : "a punishment of their choice" });
+    SFX.play(pun[2] === "shot" || pun[2] === "finish" ? "shot" : "crown");
+    toastSince(n0);
+    finishHalf();
+  }
+  function viewHalf() {
+    const h = S.game.half, names = h.pids.map(pid => esc(player(pid).name));
+    const who = names.length > 1 ? names.slice(0, -1).join(", ") + " & " + names[names.length - 1] : names[0];
+    const judge = esc(player(h.judge).name), pun = PUNISHMENTS.find(x => x[0] === h.pick);
+    const ok = !pun ? "Pick a punishment" : pun[2] ? `Log ${pun[1].toLowerCase()} & back to the ring` : "Done, back to the ring";
+    return `<div class="wrap">
+      <div class="mini-hero">
+        <span class="label">Halftime · card 26</span>
+        <h1>Last place</h1>
+        <div class="half-name">${who}</div>
+        <p class="muted" style="margin:0">${h.pids.length > 1 ? "Tied for the fewest drinks" : "Fewest drinks so far"}</p>
+      </div>
+      <section class="panel">
+        <span class="label">${h.byDictator ? `Dictator ${judge} picks the punishment` : `${S.game.dictator ? "The Dictator is Last" : "No Dictator yet"}, so top drinker ${judge} picks`}</span>
+        <div class="chips">${PUNISHMENTS.map(x => `<button class="chip" data-act="half-pick" data-k="${x[0]}" aria-pressed="${h.pick === x[0]}">${x[1]}</button>`).join("")}</div>
+      </section>
+      <button class="btn fire wide" data-act="half-ok" style="min-height:56px" ${pun ? "" : "disabled"}>${ok}</button>
+      <button class="btn ghost wide" data-act="half-skip">Skip halftime</button>
+    </div>`;
   }
   function currentMini() {
     const g = S.game;
@@ -743,6 +806,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     else if (scr === "rules") html = viewRules();
     else if (scr === "game") html = viewGame();
     else if (scr === "mini") html = viewMini();
+    else if (scr === "half") html = viewHalf();
     else if (scr === "end") html = viewEnd();
     const before = {};
     document.querySelectorAll("[data-flip]").forEach(el => { before[el.dataset.flip] = el.getBoundingClientRect(); });
@@ -825,7 +889,8 @@ textarea.field { resize: vertical; min-height: 64px; }
     const me = player(cur()).name;
     const nextUp = player(g.order[(g.cur + 1) % n]).name;
     const cardNo = g.mode === "digital" ? (52 - cardsLeft()) : g.turn;
-    const untilMini = S.freq > 0 && g.miniQueue.length ? S.freq - (g.turn % S.freq) : null;
+    const nextMini = g.miniQueue.length && g.miniAt ? g.miniAt.find(m => m.t > g.turn) : null;
+    const untilMini = nextMini ? (nextMini.c - g.turn > Math.round(S.freq / 4) ? "in ~" + (nextMini.c - g.turn) : "soon") : null;
     const bar = (label, who, btn) => `<div class="dictator-bar"><div class="who"><span class="label">${label}</span><b>${who}</b></div>${btn}</div>`;
     const powers = [];
     if (g.dictator) powers.push(bar("Dictator", esc(player(g.dictator).name), `<button class="btn small primary" data-act="challenge">Challenge</button>`));
@@ -859,7 +924,7 @@ textarea.field { resize: vertical; min-height: 64px; }
         <div class="stats">
           <div class="stat"><span class="label">Round</span><b>${round}</b></div>
           <div class="stat"><span class="label">Card</span><b>${cardNo}/52</b></div>
-          ${untilMini !== null ? `<div class="stat"><span class="label">Mini-game</span><b>in ${untilMini}</b></div>` : ""}
+          ${untilMini !== null ? `<div class="stat"><span class="label">Mini-game</span><b>${untilMini}</b></div>` : ""}
         </div>
         <div class="row" style="gap:6px;flex-wrap:nowrap">
           <button class="iconbtn cog" data-act="menu" aria-label="Scores, rules and settings">&#9881;&#65038;</button>
@@ -1325,6 +1390,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       if (e.type === "rule") { txt = e.text ? `${nm(e.pid)} made a rule: “${esc(e.text)}”` : `${nm(e.pid)} made a rule`; tag = "Rule"; }
       if (e.type === "bomb") { txt = `The Bomb blew up on ${nm(e.pid)}` + (e.secs ? ` after ${e.secs} seconds` : (e.passes ? ` after ${e.passes} passes` : "")); tag = "The Bomb"; }
       if (e.type === "race") { txt = `${SUIT_NAMES[e.suit]} won the Horse Race` + (e.winners.length ? `. Winners: ${e.winners.map(nm).join(", ")}` : ". Nobody backed it"); tag = "Horse Race"; }
+      if (e.type === "half") { txt = `Halftime: ${e.pids.map(nm).join(" & ")} came last and ${nm(e.judge)} handed out ${esc(e.what)}`; tag = "Halftime"; }
       if (e.type === "door") { txt = `${nm(e.pid)} survived The Door and made ${nm(e.victim)} finish their drink`; tag = "The Door"; }
       if (e.type === "big") { txt = `${nm(e.pid)} ${e.kind === "shot" ? "took a shot" : "finished a drink"}` + (e.reason !== "Manual" ? ` (${esc(e.reason)})` : ""); tag = e.kind === "shot" ? "Shot" : "Finished"; }
       if (txt) lines.push(`<li><span class="tl-time">${e.card ? "Card " + e.card : clock(e.t)}</span><div><span class="tl-tag">${esc(tag)}</span><p>${txt}</p></div></li>`);
@@ -1601,7 +1667,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       <button class="btn fire wide" data-act="penalty-ok" ${n ? "" : "disabled"}>${n ? `Log ${sh.n} for ${n}` : "Pick who drinks"}</button>`;
   }
 
-  const FREQ_CHOICES = [[0, "Never"], [8, "Every 8 cards"], [10, "Every 10 cards"], [13, "Every 13 cards (a quarter of the deck)"], [17, "Every 17 cards"], [26, "Every 26 cards (halfway)"]];
+  const FREQ_CHOICES = [[0, "Never"], [8, "Roughly every 8 cards"], [10, "Roughly every 10 cards"], [13, "Roughly every quarter of the deck"], [17, "Roughly every 17 cards"], [26, "Once, around halfway"]];
   // The cogwheel: scores, rules and settings in one place.
   function sheetMenu(sh) {
     const tab = sh.tab || "scores", g = S.game;
@@ -1634,7 +1700,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     }
   });
   app.addEventListener("change", e => {
-    if (e.target.id === "freq") { S.freq = parseInt(e.target.value, 10); save(); }
+    if (e.target.id === "freq") { S.freq = parseInt(e.target.value, 10); if (S.game) planMinis(S.game.turn); save(); }
   });
   function refreshStart() {
     const b = $('[data-act="start"]'); if (b) b.disabled = S.players.filter(p => p.name.trim()).length < 2;
@@ -1673,6 +1739,9 @@ textarea.field { resize: vertical; min-height: 64px; }
         return;
       }
       case "sound": SFX.toggle(); break;
+      case "half-pick": g.half.pick = el.dataset.k; break;
+      case "half-ok": punishLast(); return;
+      case "half-skip": finishHalf(); return;
       case "random": { const left = g.deck.filter(c => !c.drawn); if (left.length) drawCard(left[Math.floor(Math.random() * left.length)].id); return; }
       case "rank": SFX.play("flip"); openReveal(el.dataset.rank, null); break;
       case "next": nextTurn(); return;

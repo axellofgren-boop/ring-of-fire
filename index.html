@@ -275,6 +275,38 @@ textarea.field { resize: vertical; min-height: 64px; }
 .flash { position: fixed; inset: 0; background: #fff3d6; pointer-events: none; z-index: 45; animation: flash .55s ease-out forwards; }
 @keyframes flash { from { opacity: .9; } to { opacity: 0; } }
 
+/* The Door */
+.door-row { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: clamp(6px, 2.5vw, 16px); padding: 8px 0 2px; margin: 0 auto; width: min(100%, calc(var(--n) * 130px)); }
+.door-slot { min-width: 0; display: grid; gap: 6px; align-content: start; background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+.door-slot[disabled] { cursor: default; }
+.door-frame { position: relative; aspect-ratio: 5/9; border-radius: 40% 40% 6px 6px / 22% 22% 6px 6px; background: #12040a; border: 4px solid #6b3a1f; box-shadow: inset 0 0 18px rgba(0,0,0,.8), 0 6px 18px rgba(0,0,0,.45); perspective: 500px; }
+.door-slot.mine .door-frame { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(242,179,61,.4), 0 6px 18px rgba(0,0,0,.45); }
+.door-behind { position: absolute; inset: 0; border-radius: inherit; display: grid; place-content: center; text-align: center; gap: 2px; font-family: var(--f-display); overflow: hidden; }
+.door-frame.safe .door-behind { background: radial-gradient(circle at 50% 60%, #fff6d6 0, var(--gold) 45%, #8a5a12 100%); color: var(--ink); }
+.door-frame.trap .door-behind { background: radial-gradient(circle at 50% 75%, var(--flame) 0, #8e1420 45%, #1a0306 100%); color: var(--fg); }
+.door-behind b { font-size: clamp(1.4rem, 7vw, 2.2rem); line-height: 1; font-weight: 400; }
+.door-behind span { font-size: .7rem; letter-spacing: .08em; }
+.door-leaf { position: absolute; inset: 0; border-radius: inherit; transform-origin: left center; backface-visibility: hidden;
+  background: linear-gradient(90deg, rgba(0,0,0,.25), transparent 18%, transparent 82%, rgba(0,0,0,.3)), repeating-linear-gradient(90deg, #8a4b26 0 14px, #7a4020 14px 16px);
+  display: grid; place-items: center; }
+.door-leaf::before { content: ""; position: absolute; inset: 14% 16% 52%; border: 2px solid rgba(0,0,0,.28); border-radius: 40% 40% 4px 4px / 30% 30% 4px 4px; }
+.door-leaf::after { content: ""; position: absolute; inset: 54% 16% 8%; border: 2px solid rgba(0,0,0,.28); border-radius: 4px; }
+.door-num { font-family: var(--f-display); font-size: clamp(1.2rem, 6vw, 1.8rem); color: var(--gold); text-shadow: 0 2px 0 rgba(0,0,0,.5); position: relative; z-index: 1; }
+.knob { position: absolute; right: 12%; top: 52%; width: 9px; height: 9px; border-radius: 50%; background: var(--gold); box-shadow: 0 1px 2px rgba(0,0,0,.6); }
+.door-leaf.open { transform: rotateY(-108deg); }
+.door-leaf.open.anim { animation: dooropen 1s cubic-bezier(.3,.1,.2,1) both; }
+@keyframes dooropen { 0% { transform: none; } 25% { transform: rotateY(-8deg); } 100% { transform: rotateY(-108deg); } }
+.door-frame.trap.anim { animation: doorshake .45s ease-in-out both; }
+@keyframes doorshake { 0%, 100% { translate: 0; } 25% { translate: -4px; } 75% { translate: 4px; } }
+.door-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; min-height: 22px; }
+.door-tag { font-size: .72rem; font-weight: 800; background: var(--card); color: var(--ink); border-radius: 999px; padding: 2px 7px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.door-tag.out { background: var(--bad); text-decoration: line-through; }
+.door-tag.in { background: var(--good); }
+.chip.done { border-color: var(--good); }
+.chip.gone { opacity: .45; text-decoration: line-through; }
+.victims { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.victims .btn { min-height: 52px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* End of night */
 .night-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; text-align: center; }
 .night-stats > div { background: var(--surface); border-radius: 14px; padding: 10px 4px; display: grid; gap: 2px; }
@@ -385,7 +417,7 @@ textarea.field { resize: vertical; min-height: 64px; }
   };
 
   // ---------- State ----------
-  const MINI_GAMES = ["Horse Race", "The Bomb"];
+  const MINI_GAMES = ["Horse Race", "The Bomb", "The Door"];
   let S = {
     screen: "setup",
     mode: "digital",
@@ -552,6 +584,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     g.miniIdx += 1;
     if (g.miniIdx % g.miniQueue.length === 0) g.miniQueue = shuffle(g.miniQueue);
     g.race = null;
+    g.door = null;
     clearTimeout(ui.bombTimer); ui.bombTimer = null;
     g.bomb = null;
     S.screen = "game"; save(); render();
@@ -592,6 +625,8 @@ textarea.field { resize: vertical; min-height: 64px; }
       win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.22, { type: "triangle", vol: 0.14, at: i * 0.11 })); },
       lose() { [392, 330, 262].forEach((f, i) => tone(f, 0.28, { type: "sawtooth", vol: 0.07, at: i * 0.16 })); },
       crown() { [392, 523, 659, 784].forEach((f, i) => tone(f, 0.3, { type: "square", vol: 0.06, at: i * 0.09 })); },
+      creak() { tone(150, 0.7, { type: "sawtooth", vol: 0.035, slide: 90 }); tone(230, 0.5, { type: "sawtooth", vol: 0.025, slide: -60, at: 0.25 }); },
+      trapdoor() { tone(110, 0.45, { type: "square", vol: 0.09, slide: -70, at: 0.5 }); noise(0.3, { freq: 280, vol: 0.4, at: 0.55 }); },
       gallop() { [0, 0.09, 0.22, 0.31].forEach(a => noise(0.04, { freq: 900, q: 2, vol: 0.45, at: a })); },
       back() { tone(300, 0.22, { type: "triangle", vol: 0.12, slide: -150, at: 0.25 }); },
       tick() { tone(1250, 0.035, { type: "square", vol: 0.07 }); tone(950, 0.035, { type: "square", vol: 0.06, at: 0.13 }); },
@@ -822,6 +857,14 @@ textarea.field { resize: vertical; min-height: 64px; }
 
   function viewMini() {
     const name = currentMini();
+    if (name === "The Door" && S.game.door) return `<div class="wrap">
+      <div class="mini-hero" style="padding-top:8px;gap:4px">
+        <span class="label">Mini-game · after card ${S.game.mode === "digital" ? 52 - cardsLeft() : S.game.turn}</span>
+        <h1>The Door</h1>
+      </div>
+      ${viewDoor(S.game.door)}
+      <button class="btn ghost wide" data-act="board">Open scoreboard</button>
+    </div>`;
     const r = S.game.race;
     if (name === "The Bomb" && S.game.bomb) return viewBomb(S.game.bomb);
     if (name === "Horse Race" && r) return `<div class="wrap">
@@ -864,6 +907,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     SFX.play("whistle");
     S.screen = "mini";
     S.game.race = currentMini() === "Horse Race" ? newRace() : null;
+    S.game.door = currentMini() === "The Door" ? newDoor() : null;
     S.game.bomb = currentMini() === "The Bomb" ? newBomb() : null;
   }
   function raceWinners(r) { return S.game.order.filter(pid => r.bets[pid].suit === r.winner); }
@@ -1116,6 +1160,108 @@ textarea.field { resize: vertical; min-height: 64px; }
     </div>`;
   }
 
+  // ---------- The Door ----------
+  // Each round shows 2-5 doors with at least one safe and at least one trap. Everyone still in picks a door; trap doors knock you out.
+  // The last one standing chooses who finishes their drink.
+  function newDoor() {
+    const d = { phase: "pick", round: 0, alive: S.game.order.slice(), trap: 0, winner: null, victim: null };
+    doorRound(d);
+    return d;
+  }
+  function doorRound(d) {
+    d.round += 1;
+    const n = 2 + Math.floor(Math.random() * 4), safe = 1 + Math.floor(Math.random() * (n - 1));
+    d.safe = shuffle(Array.from({ length: n }, (_, i) => i < safe));
+    d.picks = {}; d.sel = null; d.out = []; d.wipe = false; d.phase = "pick";
+  }
+  const doorPicker = d => d.sel || d.alive.find(pid => d.picks[pid] == null) || null;
+
+  function doorAct(act, el) {
+    const d = S.game.door, id = el.dataset.id, logFrom = S.game.log.length;
+    if (!d) return;
+    if (act === "dr-sel" && d.phase === "pick") d.sel = id;
+    if (act === "dr-door" && d.phase === "pick") { const p = doorPicker(d); if (p) { d.picks[p] = +el.dataset.k; d.sel = null; SFX.play("tap"); } }
+    if (act === "dr-rand" && d.phase === "pick") d.alive.forEach(pid => { if (d.picks[pid] == null) d.picks[pid] = Math.floor(Math.random() * d.safe.length); });
+    if (act === "dr-trap") d.trap = +el.dataset.k;
+    if (act === "dr-open" && d.phase === "pick" && d.alive.every(pid => d.picks[pid] != null)) {
+      d.out = d.alive.filter(pid => !d.safe[d.picks[pid]]);
+      // If every door someone chose was a trap, nobody is out and the round replays.
+      d.wipe = d.out.length === d.alive.length;
+      if (!d.wipe) d.alive = d.alive.filter(pid => !d.out.includes(pid));
+      if (d.trap) { setTimeout(() => toastSince(logFrom), 1200); d.out.forEach(pid => logDrink(pid, "sip", d.trap, "The Door: trap door")); }
+      if (d.alive.length === 1) d.winner = d.alive[0];
+      d.phase = "reveal"; ui.doorAnim = true;
+      SFX.play("creak");
+      if (d.out.length) SFX.play("trapdoor");
+      setTimeout(() => SFX.play(d.winner ? "win" : d.out.length ? "lose" : "sip"), 1100);
+      if (d.winner) setTimeout(confetti, 1200);
+    }
+    if (act === "dr-next" && d.phase === "reveal" && !d.winner) { SFX.play("whistle"); doorRound(d); }
+    if (act === "dr-win" && d.winner) d.phase = "winner";
+    if (act === "dr-victim" && d.phase === "winner") {
+      setTimeout(() => toastSince(logFrom), 0);
+      d.victim = id; d.phase = "done";
+      ev("door", { pid: d.winner, victim: id });
+      logDrink(id, "finish", 1, "The Door: " + player(d.winner).name + "'s pick");
+      setTimeout(confetti, 200);
+    }
+  }
+
+  function viewDoor(d) {
+    const nm = pid => esc(player(pid).name);
+    const list = a => a.map(nm).join(", ");
+    if (d.phase === "winner" || d.phase === "done") {
+      if (d.phase === "done") return `<div class="verdict bad" style="font-size:1.6rem">${nm(d.victim)} finishes their drink!</div>
+        <div class="callout" style="text-align:center">${nm(d.winner)} walked through the last door and chose ${nm(d.victim)}. Bottoms up.</div>
+        <button class="btn fire wide" data-act="mini-done" style="min-height:56px">Back to the ring</button>`;
+      return `<div class="verdict good" style="font-size:1.5rem">${nm(d.winner)} is the last one standing!</div>
+        <section class="panel"><h2>Who finishes their drink?</h2>
+          <span class="muted" style="font-size:.9rem">${nm(d.winner)}, pick your victim.</span>
+          <div class="victims">${S.game.order.filter(pid => pid !== d.winner).map(pid => `<button class="btn" data-act="dr-victim" data-id="${pid}">${nm(pid)}</button>`).join("")}</div>
+        </section>`;
+    }
+    const reveal = d.phase === "reveal", anim = reveal && ui.doorAnim, picker = reveal ? null : doorPicker(d);
+    ui.doorAnim = false;
+    const doors = d.safe.map((safe, i) => {
+      const who = Object.keys(d.picks).filter(pid => d.picks[pid] === i);
+      const tags = who.map(pid => `<span class="door-tag ${reveal ? (safe ? "in" : "out") : ""}">${nm(pid)}</span>`).join("");
+      return `<button class="door-slot ${picker && d.picks[picker] === i ? "mine" : ""}" data-act="dr-door" data-k="${i}" ${reveal ? "disabled" : ""} aria-label="Door ${i + 1}">
+        <div class="door-frame ${reveal ? (safe ? "safe" : "trap") : ""} ${anim && !safe ? "anim" : ""}" ${anim && !safe ? `style="animation-delay:${1 + i * 0.2}s"` : ""}>
+          <div class="door-behind">${reveal ? (safe ? "<b>✓</b><span>SAFE</span>" : "<b>☠</b><span>TRAP</span>") : ""}</div>
+          <div class="door-leaf ${reveal ? "open" : ""} ${anim ? "anim" : ""}" ${anim ? `style="animation-delay:${i * 0.2}s"` : ""}><span class="door-num">${i + 1}</span><i class="knob"></i></div>
+        </div>
+        <div class="door-tags">${tags}</div>
+      </button>`;
+    }).join("");
+    const gone = S.game.order.filter(pid => !d.alive.includes(pid) && !(reveal && d.out.includes(pid)));
+    const head = `<div class="row" style="justify-content:space-between"><span class="label">Round ${d.round} · ${d.safe.length} doors</span><span class="label">${d.alive.length} still in</span></div>
+      <div class="door-row" style="--n:${d.safe.length}">${doors}</div>`;
+    if (!reveal) {
+      const all = d.alive.every(pid => d.picks[pid] != null);
+      const chips = d.alive.map(pid => `<button class="chip ${d.picks[pid] != null ? "done" : ""}" data-act="dr-sel" data-id="${pid}" aria-pressed="${pid === picker}">${nm(pid)}${d.picks[pid] != null ? " · " + (d.picks[pid] + 1) : ""}</button>`).join("")
+        + gone.map(pid => `<span class="chip gone">${nm(pid)}</span>`).join("");
+      return `<section class="panel">${head}
+          <div class="callout race-msg" aria-live="polite">${all ? "Everyone has chosen. No backing out now." : `<b>${nm(picker)}</b>, choose a door.`} <span class="muted">At least one door is safe. The rest are traps.</span></div>
+          <div class="chips">${chips}</div>
+        </section>
+        ${d.round === 1 ? `<section class="panel"><span class="label">Fall through a trap door</span>
+          <div class="chips">${[0, 1, 2].map(n => `<button class="chip" data-act="dr-trap" data-k="${n}" aria-pressed="${d.trap === n}">${n ? `Drink ${n} ${n === 1 ? "sip" : "sips"}` : "No sips, just out"}</button>`).join("")}</div></section>` : ""}
+        <button class="btn fire wide" data-act="dr-open" ${all ? "" : "disabled"} style="min-height:56px">${all ? "Open the doors!" : "Waiting for everyone to choose"}</button>
+        ${all ? "" : `<button class="btn ghost wide" data-act="dr-rand">Random doors for the rest</button>`}
+        ${d.round === 1 ? `<button class="btn ghost wide" data-act="mini-done">Skip The Door</button>` : ""}`;
+    }
+    const sips = d.trap && d.out.length ? ` ${d.trap === 1 ? "A sip" : d.trap + " sips"} each for falling in.` : "";
+    const msg = d.wipe ? `Every door you picked was a trap! Nobody is out.${sips} Fresh doors.`
+      : d.out.length ? `Out: <b>${list(d.out)}</b>.${sips}`
+      : "Everyone made it through!";
+    const next = d.winner
+      ? `<button class="btn fire wide" data-act="dr-win" style="min-height:56px">${nm(d.winner)} decides who finishes their drink</button>`
+      : `<button class="btn fire wide" data-act="dr-next" style="min-height:56px">Next round: ${d.alive.length} left</button>`;
+    return `<section class="panel">${head}
+        <div class="callout race-msg" aria-live="polite">${msg}${d.winner ? ` <b>${nm(d.winner)}</b> is the last one standing!` : ""}</div>
+      </section>${next}`;
+  }
+
   function computeAwards() {
     const g = S.game, evs = g.events || [], order = g.order;
     const count = (type, key, filter) => { const m = {}; evs.filter(e => e.type === type && (!filter || filter(e))).forEach(e => { const k = e[key || "pid"]; m[k] = (m[k] || 0) + 1; }); return m; };
@@ -1147,6 +1293,8 @@ textarea.field { resize: vertical; min-height: 64px; }
     add("Most Wanted Mate", "Picked as a drinking mate the most", tops(count("mate", "mate")), v => pl(v, "time"));
     add("Lawmaker", "Made the most rules", tops(count("rule")), v => pl(v, "rule"));
     add("Bomb Magnet", "Blew up holding The Bomb the most", tops(count("bomb")), v => pl(v, "explosion"));
+    add("Door Master", "Last one standing at The Door", tops(count("door")), v => pl(v, "win"));
+    add("Shown the Door", "Picked to finish their drink at The Door", tops(count("door", "victim")), v => pl(v, "time"));
     add("Lucky Punter", "Backed the most winning horses", tops(wins), v => pl(v, "win"));
     add("Waterfall Starter", "Drew the most Aces", tops(count("card", "pid", e => e.rank === "A")), v => pl(v, "Ace"));
     return out;
@@ -1155,7 +1303,7 @@ textarea.field { resize: vertical; min-height: 64px; }
   function timeline() {
     const g = S.game, evs = (g.events || []).slice();
     // Shots and finished drinks are highlights too.
-    g.log.filter(e => e.kind !== "sip" && !e.reason.startsWith("Mate of") && e.reason !== "The Bomb").forEach(e => evs.push({ type: "big", pid: e.pid, kind: e.kind, reason: e.reason, t: e.t, card: e.card }));
+    g.log.filter(e => e.kind !== "sip" && !e.reason.startsWith("Mate of") && !e.reason.startsWith("The Door:") && e.reason !== "The Bomb").forEach(e => evs.push({ type: "big", pid: e.pid, kind: e.kind, reason: e.reason, t: e.t, card: e.card }));
     evs.sort((x, y) => x.t - y.t);
     const nm = id => `<b>${esc(player(id).name)}</b>`;
     const clock = t => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -1170,6 +1318,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       if (e.type === "rule") { txt = `${nm(e.pid)} made a rule: “${esc(e.text)}”`; tag = "Rule"; }
       if (e.type === "bomb") { txt = `The Bomb blew up on ${nm(e.pid)} after ${e.passes} ${e.passes === 1 ? "pass" : "passes"}` + (e.timedOut ? ", held too long" : ""); tag = "The Bomb"; }
       if (e.type === "race") { txt = `${SUIT_NAMES[e.suit]} won the Horse Race` + (e.winners.length ? `. Winners: ${e.winners.map(nm).join(", ")}` : ". Nobody backed it"); tag = "Horse Race"; }
+      if (e.type === "door") { txt = `${nm(e.pid)} survived The Door and made ${nm(e.victim)} finish their drink`; tag = "The Door"; }
       if (e.type === "big") { txt = `${nm(e.pid)} ${e.kind === "shot" ? "took a shot" : "finished a drink"}` + (e.reason !== "Manual" ? ` (${esc(e.reason)})` : ""); tag = e.kind === "shot" ? "Shot" : "Finished"; }
       if (txt) lines.push(`<li><span class="tl-time">${e.card ? "Card " + e.card : clock(e.t)}</span><div><span class="tl-tag">${esc(tag)}</span><p>${txt}</p></div></li>`);
     });
@@ -1444,7 +1593,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       case "coup": SFX.play("crown"); confetti(); ev("crown", { pid: sh.who, from: g.dictator, via: "coup" }); g.dictator = sh.who; ui.sheet = null; break;
       case "pay": { const n0 = g.log.length; logDrink(sh.who, el.dataset.k, 1, "Failed Dictator challenge"); ui.sheet = null; toastSince(n0); break; }
       case "mini-done": finishMini(); return;
-      default: if (act.startsWith("hr-")) raceAct(act, el); else if (act.startsWith("bm-")) bombAct(act, el); break;
+      default: if (act.startsWith("hr-")) raceAct(act, el); else if (act.startsWith("bm-")) bombAct(act, el); else if (act.startsWith("dr-")) doorAct(act, el); break;
       case "again": { S.screen = "setup"; startGame(); return; }
       case "setup": S.screen = "setup"; S.game = null; break;
     }

@@ -318,8 +318,9 @@ textarea.field { resize: vertical; min-height: 64px; }
 .night-stats .label { font-size: .66rem; letter-spacing: .08em; }
 .awards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .award { background: var(--surface); border-radius: 16px; padding: 14px 12px; display: grid; gap: 4px; align-content: start; min-width: 0; }
-.award:first-child { grid-column: 1 / -1; background: linear-gradient(160deg, var(--surface-2), var(--surface)); border: 1.5px solid var(--gold); }
-.award:first-child .aw-who { font-size: 1.8rem; }
+.award:first-child { background: linear-gradient(160deg, var(--surface-2), var(--surface)); border: 1.5px solid var(--gold); }
+.awards.odd .award:first-child { grid-column: 1 / -1; }
+.awards.odd .award:first-child .aw-who { font-size: 1.8rem; }
 .award .label { color: var(--gold); }
 .aw-who { font-family: var(--f-display); font-size: 1.2rem; line-height: 1.1; overflow-wrap: anywhere; }
 .aw-stat { font-weight: 800; font-size: .92rem; }
@@ -646,9 +647,9 @@ textarea.field { resize: vertical; min-height: 64px; }
     const low = Math.min(...b.map(score));
     g.halfDone = true;
     const pids = b.filter(r => score(r) === low).map(r => r.pid);
-    // A Dictator who is Last themselves doesn't get to pick their own punishment.
-    const byDictator = !!g.dictator && !pids.includes(g.dictator);
-    g.half = { pids, judge: byDictator ? g.dictator : b[0].pid, byDictator, pick: null, thenMini };
+    // A Dictator who is Last decides for themselves whether to catch up.
+    const self = !!g.dictator && pids.includes(g.dictator);
+    g.half = { pids, judge: g.dictator || b[0].pid, byDictator: !!g.dictator, self, pick: null, thenMini };
     S.screen = "half";
     SFX.play("whistle");
   }
@@ -662,7 +663,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     const g = S.game, h = g.half, pun = PUNISHMENTS.find(x => x[0] === h.pick);
     const n0 = g.log.length;
     if (pun[2]) h.pids.forEach(pid => logDrink(pid, pun[2], pun[3], "Halftime: last place"));
-    ev("half", { pids: h.pids, judge: h.judge, what: pun[2] ? pun[1].toLowerCase() : "a punishment of their choice" });
+    ev("half", { pids: h.pids, judge: h.judge, self: h.self, what: pun[2] ? pun[1].toLowerCase() : "a punishment of their choice" });
     SFX.play(pun[2] === "shot" || pun[2] === "finish" ? "shot" : "crown");
     toastSince(n0);
     finishHalf();
@@ -671,7 +672,9 @@ textarea.field { resize: vertical; min-height: 64px; }
     const h = S.game.half, names = h.pids.map(pid => esc(player(pid).name));
     const who = names.length > 1 ? names.slice(0, -1).join(", ") + " & " + names[names.length - 1] : names[0];
     const judge = esc(player(h.judge).name), pun = PUNISHMENTS.find(x => x[0] === h.pick);
-    const ok = !pun ? "Pick a punishment" : pun[2] ? `Log ${pun[1].toLowerCase()} & back to the ring` : "Done, back to the ring";
+    const ok = !pun ? (h.self ? "Next, no penalty" : "Pick a punishment") : pun[2] ? `Log ${pun[1].toLowerCase()} & back to the ring` : "Done, back to the ring";
+    const options = PUNISHMENTS.filter(x => !h.self || x[2]);
+    const label = h.self ? `Dictator ${judge}, catch up or carry on? Your call` : h.byDictator ? `Dictator ${judge} picks the punishment` : `No Dictator yet, so top drinker ${judge} picks`;
     return `<div class="wrap">
       <div class="mini-hero">
         <span class="label">Halftime · card 26</span>
@@ -680,11 +683,11 @@ textarea.field { resize: vertical; min-height: 64px; }
         <p class="muted" style="margin:0">${h.pids.length > 1 ? "Tied for the fewest drinks" : "Fewest drinks so far"}</p>
       </div>
       <section class="panel">
-        <span class="label">${h.byDictator ? `Dictator ${judge} picks the punishment` : `${S.game.dictator ? "The Dictator is Last" : "No Dictator yet"}, so top drinker ${judge} picks`}</span>
-        <div class="chips">${PUNISHMENTS.map(x => `<button class="chip" data-act="half-pick" data-k="${x[0]}" aria-pressed="${h.pick === x[0]}">${x[1]}</button>`).join("")}</div>
+        <span class="label">${label}</span>
+        <div class="chips">${options.map(x => `<button class="chip" data-act="half-pick" data-k="${x[0]}" aria-pressed="${h.pick === x[0]}">${x[1]}</button>`).join("")}</div>
       </section>
-      <button class="btn fire wide" data-act="half-ok" style="min-height:56px" ${pun ? "" : "disabled"}>${ok}</button>
-      <button class="btn ghost wide" data-act="half-skip">Skip halftime</button>
+      <button class="btn fire wide" data-act="${!pun && h.self ? "half-skip" : "half-ok"}" style="min-height:56px" ${pun || h.self ? "" : "disabled"}>${ok}</button>
+      ${h.self ? "" : `<button class="btn ghost wide" data-act="half-skip">Skip halftime</button>`}
     </div>`;
   }
   function currentMini() {
@@ -694,7 +697,10 @@ textarea.field { resize: vertical; min-height: 64px; }
   function finishMini() {
     const g = S.game;
     g.miniIdx += 1;
-    if (g.miniIdx % g.miniQueue.length === 0) g.miniQueue = shuffle(g.miniQueue);
+    if (g.miniIdx % g.miniQueue.length === 0) {
+      const last = g.miniQueue[g.miniQueue.length - 1];
+      do g.miniQueue = shuffle(g.miniQueue); while (g.miniQueue.length > 1 && g.miniQueue[0] === last);
+    }
     g.race = null;
     g.door = null;
     g.imp = null;
@@ -907,8 +913,6 @@ textarea.field { resize: vertical; min-height: 64px; }
     const me = player(cur()).name;
     const nextUp = player(g.order[(g.cur + 1) % n]).name;
     const cardNo = g.mode === "digital" ? (52 - cardsLeft()) : g.turn;
-    const nextMini = g.miniQueue.length && g.miniAt ? g.miniAt.find(m => m.t > g.turn) : null;
-    const untilMini = nextMini ? (nextMini.c - g.turn > Math.round(S.freq / 4) ? "in ~" + (nextMini.c - g.turn) : "soon") : null;
     const bar = (label, who, btn) => `<div class="dictator-bar"><div class="who"><span class="label">${label}</span><b>${who}</b></div>${btn}</div>`;
     const powers = [];
     if (g.dictator) powers.push(bar("Dictator", esc(player(g.dictator).name), `<button class="btn small primary" data-act="challenge">Challenge</button>`));
@@ -942,7 +946,6 @@ textarea.field { resize: vertical; min-height: 64px; }
         <div class="stats">
           <div class="stat"><span class="label">Round</span><b>${round}</b></div>
           <div class="stat"><span class="label">Card</span><b>${cardNo}/52</b></div>
-          ${untilMini !== null ? `<div class="stat"><span class="label">Mini-game</span><b>${untilMini}</b></div>` : ""}
         </div>
         <div class="row" style="gap:6px;flex-wrap:nowrap">
           <button class="iconbtn cog" data-act="menu" aria-label="Scores, rules and settings">&#9881;&#65038;</button>
@@ -1492,26 +1495,68 @@ textarea.field { resize: vertical; min-height: 64px; }
     const lastCard = g.mode === "digital" ? 52 - cardsLeft() : g.turn;
     crowns.forEach((c, i) => { const until = i + 1 < crowns.length ? crowns[i + 1].card : lastCard; reign[c.pid] = Math.max(reign[c.pid] || 0, until - c.card); });
     const wins = {}; evs.filter(e => e.type === "race").forEach(e => e.winners.forEach(pid => { wins[pid] = (wins[pid] || 0) + 1; }));
-    const out = [];
-    const add = (title, blurb, t, unit) => { if (t) out.push({ title, blurb, who: t.who, stat: unit(t.v) }); };
     const pl = (n, w) => n + " " + w + (n === 1 ? "" : "s");
-    add("Thirstiest", "Drank the most tonight", tops(score), () => { const r = board().find(x => x.pid === tops(score).who[0]); return fmtTotals(r); });
-    if (order.length > 2) add("Designated Driver", "Got away with the least", tops(sips, true), v => pl(v, "sip"));
-    add("Hard Liquor", "Most shots and finished drinks", tops(hard), v => pl(v, "big one"));
-    add("Sip Dealer", "Handed out the most sips", tops(sumBy("give")), v => pl(v, "sip") + " given");
-    add("Best Dictator", "Longest reign as Dictator", tops(reign), v => pl(v, "card") + " on the throne");
-    add("Revolutionary", "Won the most Dictator challenges", tops(count("challenge", "pid", e => e.win)), v => pl(v, "coup"));
-    add("Failed Rebel", "Lost the most Dictator challenges", tops(count("challenge", "pid", e => !e.win)), v => pl(v, "failed coup"));
-    add("Most Wanted Mate", "Picked as a drinking mate the most", tops(count("mate", "mate")), v => pl(v, "time"));
-    add("Lawmaker", "Made the most rules", tops(count("rule")), v => pl(v, "rule"));
-    add("Bomb Magnet", "Blew up holding The Bomb the most", tops(count("bomb")), v => pl(v, "explosion"));
-    add("Door Master", "Last one standing at The Door", tops(count("door")), v => pl(v, "win"));
-    add("Shown the Door", "Picked to finish their drink at The Door", tops(count("door", "victim")), v => pl(v, "time"));
-    add("Master of Disguise", "Won the most rounds as The Impostor", tops(count("impostor", "pid", e => e.win)), v => pl(v, "win"));
-    add("Busted", "Caught the most as The Impostor", tops(count("impostor", "pid", e => !e.win)), v => pl(v, "time"));
-    add("Wrongly Accused", "Voted out as The Impostor while innocent", tops(count("impostor", "accused", e => !e.caught && e.accused !== "none")), v => pl(v, "time"));
-    add("Lucky Punter", "Backed the most winning horses", tops(wins), v => pl(v, "win"));
-    add("Waterfall Starter", "Drew the most Aces", tops(count("card", "pid", e => e.rank === "A")), v => pl(v, "Ace"));
+    // Every candidate award: a per-player value, and whether lowest wins.
+    const C = (title, blurb, m, unit, low) => ({ title, blurb, m, unit, low: !!low });
+    const cands = [
+      C("Hard Liquor", "Most shots and finished drinks", hard, v => pl(v, "big one")),
+      C("Sip Dealer", "Handed out the most sips", sumBy("give"), v => pl(v, "sip") + " given"),
+      C("Best Dictator", "Longest reign as Dictator", reign, v => pl(v, "card") + " on the throne"),
+      C("Revolutionary", "Won the most Dictator challenges", count("challenge", "pid", e => e.win), v => pl(v, "coup")),
+      C("Failed Rebel", "Lost the most Dictator challenges", count("challenge", "pid", e => !e.win), v => pl(v, "failed coup")),
+      C("Most Wanted Mate", "Picked as a drinking mate the most", count("mate", "mate"), v => pl(v, "time")),
+      C("Lawmaker", "Made the most rules", count("rule"), v => pl(v, "rule")),
+      C("Bomb Magnet", "Blew up holding The Bomb the most", count("bomb"), v => pl(v, "explosion")),
+      C("Door Master", "Last one standing at The Door", count("door"), v => pl(v, "win")),
+      C("Shown the Door", "Picked to finish their drink at The Door", count("door", "victim"), v => pl(v, "time")),
+      C("Master of Disguise", "Won the most rounds as The Impostor", count("impostor", "pid", e => e.win), v => pl(v, "win")),
+      C("Busted", "Caught the most as The Impostor", count("impostor", "pid", e => !e.win), v => pl(v, "time")),
+      C("Wrongly Accused", "Voted out as The Impostor while innocent", count("impostor", "accused", e => !e.caught && e.accused !== "none"), v => pl(v, "time")),
+      C("Lucky Punter", "Backed the most winning horses", wins, v => pl(v, "win")),
+      C("Waterfall Starter", "Drew the most Aces", count("card", "pid", e => e.rank === "A"), v => pl(v, "Ace")),
+      C("Designated Driver", "Got away with the fewest sips", sips, v => pl(v, "sip"), true)
+    ];
+    // One award per player. Thirstiest goes first; then each remaining award goes to its real winner,
+    // rarest feats first (the bigger the winner's share of that stat, the sooner it is handed out).
+    const out = [], got = new Set(), used = new Set();
+    const give = (title, blurb, pid, stat) => { out.push({ title, blurb, who: [pid], stat }); got.add(pid); used.add(title); };
+    const thirst = tops(score);
+    if (thirst) { const pid = thirst.who[0]; give("Thirstiest", "Drank the most tonight", pid, fmtTotals(board().find(x => x.pid === pid))); }
+    while (got.size < order.length) {
+      let best = null;
+      cands.forEach((c, ci) => {
+        if (used.has(c.title)) return;
+        if (c.low && order.length < 3) return;
+        const vals = order.map(pid => c.m[pid] || 0);
+        const target = c.low ? Math.min(...vals) : Math.max(...vals);
+        if (!c.low && target <= 0) return;
+        const winners = order.filter(pid => (c.m[pid] || 0) === target);
+        if (c.low && winners.length === order.length) return;
+        const free = winners.filter(pid => !got.has(pid));
+        if (!free.length) return;
+        const total = vals.reduce((x, y) => x + y, 0);
+        const share = c.low ? 0.3 : target / Math.max(1, total);
+        if (!best || share > best.share + 1e-9) best = { c, pid: free[0], v: target, tied: winners.length > 1, share };
+      });
+      if (!best) break;
+      give(best.c.title, best.c.blurb + (best.tied ? " (shared)" : ""), best.pid, best.c.unit(best.v));
+    }
+    // Anyone still without an award gets a personal highlight instead of a made-up superlative.
+    const perCard = pid => { const m = {}; g.log.filter(e => e.pid === pid && e.kind === "sip").forEach(e => { m[e.card || 0] = (m[e.card || 0] || 0) + e.n; }); return m; };
+    const half = Math.ceil(lastCard / 2);
+    order.filter(pid => !got.has(pid)).forEach(pid => {
+      const pc = perCard(pid), cards = Object.keys(pc);
+      const worst = cards.sort((x, y) => pc[y] - pc[x])[0];
+      const late = g.log.filter(e => e.pid === pid && e.kind === "sip" && (e.card || 0) > half).reduce((x, e) => x + e.n, 0);
+      const opts = [
+        worst && pc[worst] >= 3 ? ["Rough Patch", "Their heaviest single card", `${pl(pc[worst], "sip")} at card ${worst}`] : null,
+        sips[pid] && late / sips[pid] >= 0.6 ? ["Late Bloomer", "Did most of their drinking in the second half", `${late} of ${pl(sips[pid], "sip")} after halftime`] : null,
+        sips[pid] && late / sips[pid] <= 0.4 ? ["Fast Starter", "Did most of their drinking in the first half", `${sips[pid] - late} of ${pl(sips[pid], "sip")} before halftime`] : null,
+        ["Steady Sipper", "Kept the glass moving all night", pl(sips[pid] || 0, "sip")]
+      ].filter(o => o && !used.has(o[0]));
+      const o = opts[0] || ["Along for the Ride", "Here for the company", pl(sips[pid] || 0, "sip")];
+      give(o[0], o[1], pid, o[2]);
+    });
     return out;
   }
 
@@ -1534,7 +1579,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       if (e.type === "rule") { txt = e.text ? `${nm(e.pid)} made a rule: “${esc(e.text)}”` : `${nm(e.pid)} made a rule`; tag = "Rule"; }
       if (e.type === "bomb") { txt = `The Bomb blew up on ${nm(e.pid)}` + (e.secs ? ` after ${e.secs} seconds` : (e.passes ? ` after ${e.passes} passes` : "")); tag = "The Bomb"; }
       if (e.type === "race") { txt = `${SUIT_NAMES[e.suit]} won the Horse Race` + (e.winners.length ? `. Winners: ${e.winners.map(nm).join(", ")}` : ". Nobody backed it"); tag = "Horse Race"; }
-      if (e.type === "half") { txt = `Halftime: ${e.pids.map(nm).join(" & ")} came last and ${nm(e.judge)} handed out ${esc(e.what)}`; tag = "Halftime"; }
+      if (e.type === "half") { txt = e.self ? `Halftime: Dictator ${nm(e.judge)} came last and caught up with ${esc(e.what)}` : `Halftime: ${e.pids.map(nm).join(" & ")} came last and ${nm(e.judge)} handed out ${esc(e.what)}`; tag = "Halftime"; }
       if (e.type === "door") { txt = `${nm(e.pid)} survived The Door and made ${nm(e.victim)} finish their drink`; tag = "The Door"; }
       if (e.type === "impostor") { txt = !e.caught ? `${nm(e.pid)} was The Impostor and got away with it (word: “${esc(e.word)}”)` : e.guessed ? `${nm(e.pid)} was caught as The Impostor but guessed “${esc(e.word)}”` : `${nm(e.pid)} was caught as The Impostor (word: “${esc(e.word)}”)`; tag = "The Impostor"; }
       if (e.type === "big") { txt = `${nm(e.pid)} ${e.kind === "shot" ? "took a shot" : "finished a drink"}` + (e.reason !== "Manual" ? ` (${esc(e.reason)})` : ""); tag = e.kind === "shot" ? "Shot" : "Finished"; }
@@ -1657,7 +1702,7 @@ textarea.field { resize: vertical; min-height: 64px; }
         <div><b>${tot.big}</b><span class="label">shots & downs</span></div>
       </div>
       <section class="stack"><h2>How the night went</h2>${nightChart()}</section>
-      <section class="stack"><h2>Awards</h2><div class="awards">${awards}</div></section>
+      <section class="stack"><h2>Awards</h2><div class="awards ${computeAwards().length % 2 ? "odd" : ""}">${awards}</div></section>
       <section class="stack"><h2>Final standings</h2><div class="board">${rows}</div></section>
       <section class="stack"><h2>The night</h2>
         ${tl.length ? `<ol class="timeline">${tl.join("")}</ol>` : `<p class="muted" style="margin:0">A quiet night. No crowns, mates, rules or shots to report.</p>`}
@@ -1884,7 +1929,7 @@ textarea.field { resize: vertical; min-height: 64px; }
         return;
       }
       case "sound": SFX.toggle(); break;
-      case "half-pick": g.half.pick = el.dataset.k; break;
+      case "half-pick": g.half.pick = g.half.pick === el.dataset.k ? null : el.dataset.k; break;
       case "half-ok": punishLast(); return;
       case "half-skip": finishHalf(); return;
       case "random": { const left = g.deck.filter(c => !c.drawn); if (left.length) drawCard(left[Math.floor(Math.random() * left.length)].id); return; }

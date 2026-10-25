@@ -469,7 +469,7 @@ textarea.field { resize: vertical; min-height: 64px; }
   const MINI_GAMES = ["Horse Race", "The Bomb", "The Door", "The Impostor"];
   let S = {
     screen: "setup",
-    mode: "ring", // "ring" for the full game, or the name of one mini-game to play on its own
+    pick: [], // mini-games ticked to play on their own; empty means the full Ring of Fire
     players: [{ id: uid(), name: "Player 1" }, { id: uid(), name: "Player 2" }, { id: uid(), name: "Player 3" }, { id: uid(), name: "Player 4" }],
     rules: clone(DEFAULT_RULES),
     freq: 13,
@@ -494,7 +494,10 @@ textarea.field { resize: vertical; min-height: 64px; }
       S = Object.assign(S, d);
       S.rules = Object.assign(clone(DEFAULT_RULES), d.rules || {});
       S.miniGames = MINI_GAMES.slice();
-      if (!MINI_GAMES.includes(S.mode)) S.mode = "ring";
+      if (MINI_GAMES.includes(S.mode)) S.pick = [S.mode];
+      delete S.mode;
+      S.pick = (S.pick || []).filter(m => MINI_GAMES.includes(m));
+      if (S.game && typeof S.game.solo === "string") S.game.solo = [S.game.solo];
       if (S.game && S.game.mode === "physical") { S.game = null; S.screen = "setup"; } // the physical deck is gone
       if (S.game && S.game.miniQueue) MINI_GAMES.forEach(m => { if (!S.game.miniQueue.includes(m)) S.game.miniQueue.push(m); });
     }
@@ -530,7 +533,7 @@ textarea.field { resize: vertical; min-height: 64px; }
   }
 
   // ---------- Game flow ----------
-  // solo: the name of a mini-game to play on its own, round after round, instead of the ring.
+  // solo: the mini-games to play on their own, round after round in a shuffled rotation, instead of the ring.
   function startGame(solo) {
     const names = S.players.filter(p => p.name.trim());
     S.players = names;
@@ -539,7 +542,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     shuffle(deck);
     deck.forEach((c, i) => { c.id = i; c.drawn = false; c.jit = (Math.random() - 0.5) * 6; });
     S.game = {
-      solo: solo || null,
+      solo: solo && solo.length ? solo.slice() : null,
       round: 1,
       order: names.map(p => p.id),
       deck,
@@ -551,7 +554,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       houseRules: [],
       events: [],
       log: [],
-      miniQueue: solo ? [solo] : shuffle(S.miniGames.slice()),
+      miniQueue: shuffle((solo && solo.length ? solo : S.miniGames).slice()),
       miniIdx: 0,
       startedAt: Date.now()
     };
@@ -567,6 +570,7 @@ textarea.field { resize: vertical; min-height: 64px; }
   function cardNow() { const g = S.game; return g.solo ? g.round : 52 - cardsLeft(); }
   function unit() { return S.game && S.game.solo ? "Round" : "Card"; }
   function miniTag() { return S.game.solo ? `Round ${S.game.round}` : `Mini-game · after card ${cardNow()}`; }
+  function soloOne() { return !!S.game.solo && S.game.solo.length === 1; }
   function backTxt() { return S.game.solo ? "Next round" : "Back to the ring"; }
   function exitGame() { clearBomb(); S.game = null; S.screen = "setup"; ui.sheet = null; }
   // Mini-games land on a random card near each slot (every S.freq cards, give or take a quarter of the gap), so nobody can count down to them.
@@ -859,11 +863,11 @@ textarea.field { resize: vertical; min-height: 64px; }
         <button class="iconbtn" data-act="down" data-id="${p.id}" aria-label="Move down" ${i === S.players.length - 1 ? "disabled" : ""}>&darr;</button>
         <button class="iconbtn" data-act="rm" data-id="${p.id}" aria-label="Remove player">&times;</button>
       </div>`).join("");
-    const solo = MINI_GAMES.includes(S.mode) ? S.mode : null;
-    const need = solo === "The Impostor" ? 3 : 2;
+    const pick = S.pick, solo = pick.length > 0;
+    const need = pick.includes("The Impostor") ? 3 : 2;
     const can = S.players.filter(p => p.name.trim()).length >= need;
     const blurb = { "Horse Race": "Bet sips on a suit and race the Aces.", "The Bomb": "Pass it round until it blows.", "The Door": "Pick a door. Dodge the trap.", "The Impostor": "Find who doesn't know the word. 3+ players." };
-    const soloBtns = MINI_GAMES.map(m => `<button class="mode" data-act="mode" data-mode="${esc(m)}" aria-pressed="${S.mode === m}"><b>${esc(m)}</b><span>${blurb[m] || ""}</span></button>`).join("");
+    const soloBtns = MINI_GAMES.map(m => `<button class="mode" data-act="mini-pick" data-k="${esc(m)}" aria-pressed="${pick.includes(m)}"><b>${esc(m)}</b><span>${blurb[m] || ""}</span></button>`).join("");
     const freqOpts = FREQ_CHOICES
       .map(([v, l]) => `<option value="${v}" ${S.freq === v ? "selected" : ""}>${l}</option>`).join("");
     return `<div class="wrap">
@@ -876,7 +880,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       <section class="stack">
         <span class="label">Game</span>
         <button class="mode full" data-act="mode" data-mode="ring" aria-pressed="${!solo}"><b>Ring of Fire</b><span>The full game: 52 cards, house rules and surprise mini-games.</span></button>
-        <span class="label">Or just one mini-game</span>
+        <span class="label">Or just mini-games · tick one or more</span>
         <div class="modes">${soloBtns}</div>
       </section>
       <section class="panel">
@@ -893,8 +897,8 @@ textarea.field { resize: vertical; min-height: 64px; }
         <span class="muted" style="font-size:.9rem">Mini-games in the mix: ${S.miniGames.map(esc).join(", ")}. More coming.</span>
         <button class="btn ghost" data-act="rules">Edit card rules</button>
       </section>`}
-      <button class="btn fire wide" data-act="start" ${can ? "" : "disabled"} style="font-size:1.1rem;min-height:56px">${solo ? "Play " + esc(solo) : "Start the fire"}</button>
-      ${can ? "" : `<span class="muted" style="text-align:center">Add at least ${need} players.</span>`}
+      <button class="btn fire wide" data-act="start" ${can ? "" : "disabled"} style="font-size:1.1rem;min-height:56px">${!solo ? "Start the fire" : pick.length === 1 ? "Play " + esc(pick[0]) : `Play ${pick.length} mini-games`}</button>
+      ${can ? "" : `<span class="muted" style="text-align:center">${need === 3 ? "The Impostor needs at least 3 players." : "Add at least 2 players."}</span>`}
     </div>`;
   }
 
@@ -1122,7 +1126,7 @@ textarea.field { resize: vertical; min-height: 64px; }
           <button class="chip" data-act="hr-pre" aria-pressed="${r.pre}" style="justify-self:start">Drink half your bet before the race</button>
         </section>
         <button class="btn fire wide" data-act="hr-start" ${any ? "" : "disabled"} style="min-height:56px">${any ? "And they're off!" : "Someone has to bet"}</button>
-        ${S.game.solo ? "" : `<button class="btn ghost wide" data-act="mini-done">Skip the race</button>`}`;
+        ${soloOne() ? "" : `<button class="btn ghost wide" data-act="mini-done">Skip the race</button>`}`;
     }
     // Track: finish line at the top, side cards down the left, one lane per Ace.
     const horse = si => `<div class="horse ${SUITS[si].red ? "red-suit" : ""} ${r.last && r.last.suit === si ? "moved" : ""}" data-flip="horse-${si}">A${SUITS[si].s}</div>`;
@@ -1249,7 +1253,7 @@ textarea.field { resize: vertical; min-height: 64px; }
         <div class="bomb-starter"><span class="label">Starts with the bomb</span><div class="holder">${nm(b.starter)}</div></div>
         <div class="callout">Grab something to be the bomb and pass it around the table. A <b>hidden timer</b> is running, somewhere between 30 seconds and 3 minutes. Whoever is holding it when it goes <b>BOOM</b> takes a shot.</div>
         <button class="btn fire wide" data-act="bm-light" style="min-height:56px">Light the fuse</button>
-        ${S.game.solo ? "" : `<button class="btn ghost wide" data-act="mini-done">Skip The Bomb</button>`}`;
+        ${soloOne() ? "" : `<button class="btn ghost wide" data-act="mini-done">Skip The Bomb</button>`}`;
     } else if (b.phase === "live") {
       if (!ui.bombTimer) armBomb();
       body = `<div class="mini-hero" style="padding-top:8px;gap:4px">${after}<h1>Pass it!</h1></div>
@@ -1261,8 +1265,8 @@ textarea.field { resize: vertical; min-height: 64px; }
         ${b.logged
           ? `<div class="bomb-stage"><div class="holder">${nm(b.victim)}</div><div class="verdict bad">takes a shot!</div></div>
              <div class="callout">The fuse was ${b.secs} seconds. The shot is on the scoreboard.</div>
-             <button class="btn ${g.solo ? "fire" : "primary"} wide" data-act="bm-again" ${g.solo ? 'style="min-height:56px"' : ""}>Light another bomb</button>
-             ${g.solo ? "" : `<button class="btn fire wide" data-act="mini-done" style="min-height:56px">${backTxt()}</button>`}`
+             <button class="btn ${soloOne() ? "fire" : "primary"} wide" data-act="bm-again" ${soloOne() ? 'style="min-height:56px"' : ""}>Light another bomb</button>
+             ${soloOne() ? "" : `<button class="btn fire wide" data-act="mini-done" style="min-height:56px">${backTxt()}</button>`}`
           : `<section class="panel"><h2>Who got blown up?</h2><div class="chips">${victims}</div>
              <button class="btn fire wide" data-act="bm-log" ${b.victim ? "" : "disabled"} style="min-height:56px">${b.victim ? `${nm(b.victim)} takes a shot` : "Tap who was holding it"}</button></section>`}`;
     }
@@ -1350,7 +1354,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       const done = d.alive.filter(pid => d.picks[pid] != null).length;
       return `<div class="door-turn" aria-live="polite"><span class="label">Pick ${done + 1} of ${d.alive.length}</span><b>${nm(picker)}</b><span class="muted">tap a door</span></div>
         <section class="panel">${head}</section>
-        ${d.round === 1 && !done ? `${S.game.solo ? "" : `<button class="btn ghost wide" data-act="mini-done">Skip The Door</button>`}` : ""}`;
+        ${d.round === 1 && !done ? `${soloOne() ? "" : `<button class="btn ghost wide" data-act="mini-done">Skip The Door</button>`}` : ""}`;
     }
     const sips = d.trap && d.out.length ? ` ${d.trap === 1 ? "A sip" : d.trap + " sips"} each for falling in.` : "";
     const msg = d.wipe ? `Every door you picked was a trap! Nobody is out.${sips} Fresh doors.`
@@ -1432,11 +1436,11 @@ textarea.field { resize: vertical; min-height: 64px; }
     if (m.phase === "intro") {
       body = hero("The Impostor") + (n < 3
         ? `<div class="callout">The Impostor needs at least 3 players.</div>
-           <button class="btn fire wide" data-act="${g.solo ? "exit" : "mini-done"}" style="min-height:56px">${g.solo ? "Back to the start" : "Back to the ring"}</button>`
+           <button class="btn fire wide" data-act="${soloOne() ? "exit" : "mini-done"}" style="min-height:56px">${soloOne() ? "Back to the start" : backTxt()}</button>`
         : `<div class="callout">Everyone gets the same <b>secret word</b>, except one <b>Impostor</b> who only sees the category. Pass the phone round and peek at your role in secret. Then give one-word clues and vote out the Impostor.</div>
            <div class="callout"><b>Impostor caught:</b> they take a shot, unless they can guess the word.<br><b>Impostor gets away:</b> everyone else drinks ${IMP_SIPS}, and anyone voted out by mistake takes a shot.</div>
            <button class="btn fire wide" data-act="im-start" style="min-height:56px">Hand out the roles</button>
-           ${S.game.solo ? "" : `<button class="btn ghost wide" data-act="mini-done">Skip The Impostor</button>`}`) + board;
+           ${soloOne() ? "" : `<button class="btn ghost wide" data-act="mini-done">Skip The Impostor</button>`}`) + board;
     } else if (m.phase === "roles") {
       const who = g.order[m.seat], next = g.order[m.seat + 1];
       const dots = `<div class="imp-dots" aria-label="Role ${m.seat + 1} of ${n}">${g.order.map((_, i) => `<i class="${i < m.seat ? "on" : ""}"></i>`).join("")}</div>`;
@@ -1476,8 +1480,8 @@ textarea.field { resize: vertical; min-height: 64px; }
       body = `<div class="verdict ${m.win ? "bad" : "good"}" style="font-size:1.7rem;padding-top:12px">${m.win ? "The Impostor wins!" : "Civilians win!"}</div>
         <div class="imp-secret" style="min-height:0"><span class="label">The Impostor was</span><div class="imp-word" style="font-size:clamp(1.8rem, 9vw, 2.6rem)">${nm(m.imp)}</div><span class="sub">The word was <b>${esc(m.word)}</b></span></div>
         <div class="callout" style="text-align:center">${why} ${m.win ? `Everyone else drinks ${IMP_SIPS}.${!m.caught && m.accused !== "none" ? ` ${nm(m.accused)} takes a shot for the false accusation.` : ""}` : `${nm(m.imp)} takes a shot.`}</div>
-        <button class="btn ${g.solo ? "fire" : "primary"} wide" data-act="im-again" ${g.solo ? 'style="min-height:56px"' : ""}>Play another round</button>
-        ${g.solo ? "" : `<button class="btn fire wide" data-act="mini-done" style="min-height:56px">${backTxt()}</button>`}` + board;
+        <button class="btn ${soloOne() ? "fire" : "primary"} wide" data-act="im-again" ${soloOne() ? 'style="min-height:56px"' : ""}>Play another round</button>
+        ${soloOne() ? "" : `<button class="btn fire wide" data-act="mini-done" style="min-height:56px">${backTxt()}</button>`}` + board;
     }
     return `<div class="wrap">${body}</div>`;
   }
@@ -1660,7 +1664,7 @@ textarea.field { resize: vertical; min-height: 64px; }
         <rect id="dchart-hit" x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent"></rect>
       </svg>
       <div class="tip" id="dtip" hidden></div>
-      <div class="note">Lines count sips. ● shot &nbsp; ◆ finished drink &nbsp; ${S.game.solo ? "" : "Dashed lines mark the mini-games. "}Tap or hover the chart to see any ${unit().toLowerCase()}.</div>
+      <div class="note">Lines count sips. ● shot &nbsp; ◆ finished drink &nbsp; ${soloOne() ? "" : "Dashed lines mark the mini-games. "}Tap or hover the chart to see any ${unit().toLowerCase()}.</div>
       ${table}
     </div>`;
   }
@@ -1697,7 +1701,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     const tl = timeline();
     return `<div class="wrap">
       <div class="mini-hero" style="padding-top:12px">
-        <span class="label">${g.solo ? esc(g.solo) + " is over" : "The ring is out"}</span>
+        <span class="label">${!g.solo ? "The ring is out" : g.solo.length === 1 ? esc(g.solo[0]) + " is over" : "The mini-games are over"}</span>
         <h1>Game over</h1>
       </div>
       <div class="night-stats">
@@ -1917,7 +1921,8 @@ textarea.field { resize: vertical; min-height: 64px; }
     const g = S.game, sh = ui.sheet;
     const idx = S.players.findIndex(p => p.id === id);
     switch (act) {
-      case "mode": S.mode = el.dataset.mode; break;
+      case "mode": S.pick = []; break;
+      case "mini-pick": { const k = el.dataset.k; S.pick = S.pick.includes(k) ? S.pick.filter(m => m !== k) : MINI_GAMES.filter(m => m === k || S.pick.includes(m)); break; }
       case "add": S.players.push({ id: uid(), name: "" }); save(); render(); { const ins = app.querySelectorAll("[data-name]"); ins[ins.length - 1].focus(); } return;
       case "rm": if (idx > -1) S.players.splice(idx, 1); break;
       case "up": if (idx > 0) [S.players[idx - 1], S.players[idx]] = [S.players[idx], S.players[idx - 1]]; break;
@@ -1928,7 +1933,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       case "rules-reset":
         if (ui.resetArmed) { S.rules = clone(DEFAULT_RULES); ui.resetArmed = false; } else ui.resetArmed = true;
         break;
-      case "start": startGame(MINI_GAMES.includes(S.mode) ? S.mode : null); return;
+      case "start": startGame(S.pick.length ? S.pick : null); return;
       case "resume": S.screen = S.game.endedAt ? "end" : S.game.solo ? "mini" : "game"; wakeLock(); break;
       case "draw": {
         if (ui.pulling) return;

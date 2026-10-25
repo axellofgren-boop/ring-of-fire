@@ -264,22 +264,19 @@ textarea.field { resize: vertical; min-height: 64px; }
 
 /* The Bomb */
 .bomb-stage { display: grid; justify-items: center; gap: 4px; padding: 4px 0 2px; }
-.bomb-svg { width: min(44vw, 180px); height: auto; overflow: visible; animation: wobble var(--tick, .7s) linear infinite; filter: drop-shadow(0 12px 22px rgba(0,0,0,.55)); }
+.bomb-svg { width: min(44vw, 180px); height: auto; overflow: visible; filter: drop-shadow(0 12px 22px rgba(0,0,0,.55)); }
+.bomb-svg.live { width: min(62vw, 260px); animation: wobble .5s linear infinite; }
 .bomb-svg .spark { transform-box: fill-box; transform-origin: center; animation: spark .16s steps(2) infinite; }
 @keyframes spark { 50% { transform: scale(1.5) rotate(35deg); opacity: .75; } }
 .holder { font-family: var(--f-display); font-size: clamp(1.9rem, 9vw, 2.8rem); color: var(--gold); text-align: center; line-height: 1.05; overflow-wrap: anywhere; }
-.pass-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; }
-.pass-btn { min-height: 64px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface-2); color: var(--fg); font-weight: 800; font-size: 1.05rem; padding: 8px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pass-btn:active { transform: scale(.96); background: var(--flame); color: var(--ink); }
-.fuse-bar { height: 12px; border-radius: 999px; background: var(--bg); overflow: hidden; border: 1.5px solid var(--line); }
-.fuse-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--bad), var(--gold)); transform-origin: left; animation: burn linear forwards; }
-@keyframes burn { from { transform: scaleX(1); } to { transform: scaleX(0); } }
-.boom-svg { width: min(68vw, 270px); height: auto; overflow: visible; animation: boom .6s cubic-bezier(.2,.8,.2,1.3); }
-@keyframes boom { 0% { transform: scale(.2) rotate(-25deg); opacity: 0; } 100% { transform: none; } }
-.wrap.shake { animation: shake .55s; }
-@keyframes shake { 15% { transform: translate(-10px, 5px); } 35% { transform: translate(9px, -7px); } 55% { transform: translate(-7px, 6px); } 75% { transform: translate(5px, -3px); } }
-.flash { position: fixed; inset: 0; background: #fff3d6; pointer-events: none; z-index: 45; animation: flash .55s ease-out forwards; }
-@keyframes flash { from { opacity: .9; } to { opacity: 0; } }
+.bomb-starter { background: var(--surface); border: 1.5px solid var(--gold); border-radius: 18px; padding: 14px; display: grid; gap: 2px; justify-items: center; }
+.boom-svg { width: min(78vw, 320px); height: auto; overflow: visible; }
+.boom-svg.pop { animation: boom .7s cubic-bezier(.2,.8,.2,1.3); }
+@keyframes boom { 0% { transform: scale(.15) rotate(-30deg); opacity: 0; } 100% { transform: none; } }
+.wrap.shake { animation: shake .6s; }
+@keyframes shake { 15% { transform: translate(-12px, 6px); } 35% { transform: translate(10px, -8px); } 55% { transform: translate(-8px, 7px); } 75% { transform: translate(5px, -3px); } }
+.flash { position: fixed; inset: 0; background: #fff3d6; pointer-events: none; z-index: 45; animation: flash .7s ease-out forwards; }
+@keyframes flash { from { opacity: .95; } to { opacity: 0; } }
 
 /* The Door */
 .door-row { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: clamp(6px, 2.5vw, 16px); padding: 8px 0 2px; margin: 0 auto; width: min(100%, calc(var(--n) * 130px)); }
@@ -621,7 +618,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     if (g.miniIdx % g.miniQueue.length === 0) g.miniQueue = shuffle(g.miniQueue);
     g.race = null;
     g.door = null;
-    clearTimeout(ui.bombTimer); ui.bombTimer = null;
+    clearTimeout(ui.bombTimer); clearInterval(ui.bombTick); ui.bombTimer = ui.bombTick = null;
     g.bomb = null;
     S.screen = "game"; save(); render();
   }
@@ -1082,61 +1079,53 @@ textarea.field { resize: vertical; min-height: 64px; }
   }
 
   // ---------- The Bomb ----------
-  // A secret number of passes is drawn when the fuse is lit. Whoever is holding the bomb when the last pass lands takes a shot.
-  const FUSES = { short: [3, 8, "Short"], medium: [6, 15, "Medium"], long: [10, 25, "Long"] };
-  const BOMB_SECS = 5;
+  // Played off screen: a random player starts, the bomb goes round the table by hand, and a hidden timer (30s to 3min) decides when it blows.
+  const BOMB_MIN = 30, BOMB_MAX = 180;
   function newBomb() {
-    return { phase: "setup", fuse: "medium", timer: false, holder: cur(), passes: 0, limit: 0, from: null, deadline: 0, timedOut: false };
+    const o = S.game.order;
+    return { phase: "setup", starter: o[Math.floor(Math.random() * o.length)], deadline: 0, secs: 0, victim: null, logged: false };
   }
-  // Hot potato: hold the bomb longer than BOMB_SECS and it blows.
-  function armBomb(fresh) {
+  function armBomb() {
     const b = S.game.bomb;
-    clearTimeout(ui.bombTimer); ui.bombTimer = null;
-    if (!b || !b.timer || b.phase !== "live") return;
-    if (fresh || !b.deadline) b.deadline = Date.now() + BOMB_SECS * 1000;
+    clearTimeout(ui.bombTimer); clearInterval(ui.bombTick); ui.bombTimer = ui.bombTick = null;
+    if (!b || b.phase !== "live") return;
+    ui.bombTick = setInterval(() => { if (S.screen === "mini" && S.game && S.game.bomb === b && b.phase === "live") SFX.play("tick"); else clearInterval(ui.bombTick); }, 1000);
     ui.bombTimer = setTimeout(() => {
       ui.bombTimer = null;
-      if (S.screen === "mini" && S.game && S.game.bomb === b && b.phase === "live") { b.timedOut = true; explode(); save(); render(); }
+      if (S.screen === "mini" && S.game && S.game.bomb === b && b.phase === "live") { explode(); save(); render(); }
     }, Math.max(0, b.deadline - Date.now()));
   }
   function explode() {
-    const g = S.game, b = g.bomb, logFrom = g.log.length;
-    clearTimeout(ui.bombTimer); ui.bombTimer = null;
-    b.phase = "boom"; b.deadline = 0;
-    ev("bomb", { pid: b.holder, passes: b.passes, timedOut: b.timedOut });
-    logDrink(b.holder, "shot", 1, "The Bomb");
-    SFX.play("boom"); buzz([90, 40, 260]);
+    const b = S.game.bomb;
+    clearTimeout(ui.bombTimer); clearInterval(ui.bombTick); ui.bombTimer = ui.bombTick = null;
+    b.phase = "boom";
+    SFX.play("boom"); buzz([120, 50, 300, 50, 120]);
     ui.bombShake = true;
-    if (!reduceMotion()) { const f = document.createElement("div"); f.className = "flash"; document.body.appendChild(f); setTimeout(() => f.remove(), 600); }
-    setTimeout(() => toastSince(logFrom), 900);
+    if (!reduceMotion()) { const f = document.createElement("div"); f.className = "flash"; document.body.appendChild(f); setTimeout(() => f.remove(), 750); }
   }
   function bombAct(act, el) {
-    const g = S.game, b = g.bomb, id = el.dataset.id;
+    const g = S.game, b = g.bomb;
     if (!b) return;
-    if (act === "bm-fuse") b.fuse = el.dataset.k;
-    if (act === "bm-timer") b.timer = !b.timer;
-    if (act === "bm-holder") b.holder = id;
-    if (act === "bm-random") b.holder = g.order[Math.floor(Math.random() * g.order.length)];
     if (act === "bm-light" && b.phase === "setup") {
-      const [lo, hi] = FUSES[b.fuse];
-      b.limit = lo + Math.floor(Math.random() * (hi - lo + 1));
-      Object.assign(b, { phase: "live", passes: 0, from: null, timedOut: false });
+      b.secs = BOMB_MIN + Math.floor(Math.random() * (BOMB_MAX - BOMB_MIN + 1));
+      b.deadline = Date.now() + b.secs * 1000;
+      b.phase = "live";
       SFX.play("fuse"); buzz(20);
-      armBomb(true);
+      armBomb();
     }
-    if (act === "bm-pass" && b.phase === "live" && id && id !== b.holder) {
-      b.from = b.holder; b.holder = id; b.passes += 1;
-      if (b.passes >= b.limit) { explode(); return; }
-      SFX.play("tick"); buzz(15);
-      armBomb(true);
+    if (act === "bm-victim" && b.phase === "boom" && !b.logged) b.victim = el.dataset.id;
+    if (act === "bm-log" && b.phase === "boom" && b.victim && !b.logged) {
+      const logFrom = g.log.length;
+      ev("bomb", { pid: b.victim, secs: b.secs });
+      logDrink(b.victim, "shot", 1, "The Bomb");
+      b.logged = true;
+      setTimeout(() => toastSince(logFrom), 0);
     }
-    // The last victim starts the next round.
-    if (act === "bm-again" && b.phase === "boom") Object.assign(b, { phase: "setup", passes: 0, limit: 0, from: null, timedOut: false });
+    if (act === "bm-again" && b.phase === "boom") g.bomb = newBomb();
   }
 
-  function bombSvg(b) {
-    const tick = Math.max(0.14, 0.7 - b.passes * 0.05).toFixed(2);
-    return `<svg class="bomb-svg" viewBox="0 0 140 140" style="--tick:${tick}s" aria-hidden="true">
+  function bombSvg(live) {
+    return `<svg class="bomb-svg${live ? " live" : ""}" viewBox="0 0 140 140" aria-hidden="true">
       <circle cx="62" cy="84" r="46" fill="#151012" stroke="#f6dfb0" stroke-width="3"/>
       <ellipse cx="45" cy="66" rx="13" ry="8" fill="#fff" opacity=".22" transform="rotate(-35 45 66)"/>
       <rect x="81" y="36" width="22" height="16" rx="3" fill="#3a3033" stroke="#f6dfb0" stroke-width="3" transform="rotate(45 92 44)"/>
@@ -1144,14 +1133,14 @@ textarea.field { resize: vertical; min-height: 64px; }
       <g class="spark"><path d="M122 4 L125 14 L136 12 L127 19 L134 28 L123 23 L118 33 L117 22 L106 22 L115 16 Z" fill="#ff6a2b"/><circle cx="122" cy="18" r="6" fill="#f2b33d"/><circle cx="122" cy="18" r="3" fill="#fff"/></g>
     </svg>`;
   }
-  function boomSvg() {
+  function boomSvg(pop) {
     const pts = [];
     for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2, r = i % 2 ? 44 : 68; pts.push((70 + Math.cos(a) * r).toFixed(1) + "," + (70 + Math.sin(a) * r).toFixed(1)); }
     const inner = pts.map(p => p.split(",").map(v => (70 + (v - 70) * 0.72).toFixed(1)).join(",")).join(" ");
-    return `<svg class="boom-svg" viewBox="0 0 140 140" aria-hidden="true">
+    return `<svg class="boom-svg${pop ? " pop" : ""}" viewBox="0 0 140 140" aria-hidden="true">
       <polygon points="${pts.join(" ")}" fill="#ff6a2b" stroke="#fbf3e4" stroke-width="3" stroke-linejoin="round"/>
       <polygon points="${inner}" fill="#f2b33d"/>
-      <text x="70" y="80" text-anchor="middle" font-family="Bungee, Impact, sans-serif" font-size="27" fill="#1d1416">BOOM!</text>
+      <text x="70" y="80" text-anchor="middle" font-family="Bungee, Impact, sans-serif" font-size="22" fill="#1d1416">BOOOOM!</text>
     </svg>`;
   }
 
@@ -1161,32 +1150,26 @@ textarea.field { resize: vertical; min-height: 64px; }
     let body = "";
     if (b.phase === "setup") {
       body = `<div class="mini-hero" style="padding-top:8px;gap:4px">${after}<h1>The Bomb</h1></div>
-        <div class="bomb-stage">${bombSvg(b)}</div>
-        <div class="callout">The app picks a <b>secret number of passes</b>. Tap a name to pass the bomb on. When the last pass lands, whoever is holding it <b>takes a shot</b>.</div>
-        <section class="panel">
-          <span class="label">Fuse length</span>
-          <div class="chips">${Object.entries(FUSES).map(([k, f]) => `<button class="chip" data-act="bm-fuse" data-k="${k}" aria-pressed="${b.fuse === k}">${f[2]} · ${f[0]} to ${f[1]} passes</button>`).join("")}</div>
-          <button class="chip" data-act="bm-timer" aria-pressed="${b.timer}" style="justify-self:start">Hot potato: ${BOMB_SECS} seconds per pass or it blows</button>
-          <span class="label">Starts with the bomb</span>
-          <div class="chips">${g.order.map(pid => `<button class="chip" data-act="bm-holder" data-id="${pid}" aria-pressed="${b.holder === pid}">${nm(pid)}</button>`).join("")}<button class="chip" data-act="bm-random">Random</button></div>
-        </section>
+        <div class="bomb-stage">${bombSvg(false)}</div>
+        <div class="bomb-starter"><span class="label">Starts with the bomb</span><div class="holder">${nm(b.starter)}</div></div>
+        <div class="callout">Grab something to be the bomb and pass it around the table. A <b>hidden timer</b> is running, somewhere between 30 seconds and 3 minutes. Whoever is holding it when it goes <b>BOOM</b> takes a shot.</div>
         <button class="btn fire wide" data-act="bm-light" style="min-height:56px">Light the fuse</button>
         <button class="btn ghost wide" data-act="mini-done">Skip The Bomb</button>`;
     } else if (b.phase === "live") {
-      if (b.timer && !ui.bombTimer) armBomb(false);
-      const left = Math.max(0, b.deadline - Date.now()) / 1000;
-      const bar = b.timer ? `<div class="fuse-bar" role="timer" aria-label="Seconds left to pass"><i style="animation-duration:${BOMB_SECS}s;animation-delay:-${(BOMB_SECS - left).toFixed(2)}s"></i></div>` : "";
-      body = `<div class="bomb-stage">${bombSvg(b)}<span class="label">Holding the bomb</span><div class="holder">${nm(b.holder)}</div></div>
-        ${bar}
-        <div class="callout" aria-live="polite">${b.passes ? `Pass <b>${b.passes}</b>` + (b.from ? `, from ${nm(b.from)}` : "") + ". Still ticking..." : "The fuse is lit. Nobody knows when it blows."}</div>
-        <span class="label">Pass it to</span>
-        <div class="pass-grid">${g.order.filter(pid => pid !== b.holder).map(pid => `<button class="pass-btn" data-act="bm-pass" data-id="${pid}">${nm(pid)}</button>`).join("")}</div>`;
+      if (!ui.bombTimer) armBomb();
+      body = `<div class="mini-hero" style="padding-top:8px;gap:4px">${after}<h1>Pass it!</h1></div>
+        <div class="bomb-stage">${bombSvg(true)}</div>
+        <div class="callout" style="text-align:center">The fuse is lit. Keep it moving, nobody knows when it blows.</div>`;
     } else {
-      const f = FUSES[b.fuse];
-      body = `<div class="bomb-stage">${boomSvg()}<div class="holder">${nm(b.holder)}</div><div class="verdict bad">takes a shot!</div></div>
-        <div class="callout">${b.timedOut ? `Held it too long. ` : ""}It blew after <b>${b.passes}</b> ${b.passes === 1 ? "pass" : "passes"} (${f[2].toLowerCase()} fuse, ${f[0]} to ${f[1]}). The shot is on the scoreboard.</div>
-        <button class="btn primary wide" data-act="bm-again">Light another bomb (${nm(b.holder)} starts)</button>
-        <button class="btn fire wide" data-act="mini-done" style="min-height:56px">Back to the ring</button>`;
+      const victims = g.order.map(pid => `<button class="chip" data-act="bm-victim" data-id="${pid}" aria-pressed="${b.victim === pid}" ${b.logged ? "disabled" : ""}>${nm(pid)}</button>`).join("");
+      body = `<div class="bomb-stage">${boomSvg(ui.bombShake)}</div>
+        ${b.logged
+          ? `<div class="bomb-stage"><div class="holder">${nm(b.victim)}</div><div class="verdict bad">takes a shot!</div></div>
+             <div class="callout">The fuse was ${b.secs} seconds. The shot is on the scoreboard.</div>
+             <button class="btn primary wide" data-act="bm-again">Light another bomb</button>
+             <button class="btn fire wide" data-act="mini-done" style="min-height:56px">Back to the ring</button>`
+          : `<section class="panel"><h2>Who got blown up?</h2><div class="chips">${victims}</div>
+             <button class="btn fire wide" data-act="bm-log" ${b.victim ? "" : "disabled"} style="min-height:56px">${b.victim ? `${nm(b.victim)} takes a shot` : "Tap who was holding it"}</button></section>`}`;
     }
     const shake = ui.bombShake && b.phase === "boom" ? " shake" : "";
     ui.bombShake = false;
@@ -1351,7 +1334,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       if (e.type === "role") { txt = `${nm(e.pid)} became ${esc(S.rules[e.rank].name)}`; tag = S.rules[e.rank].name; }
       if (e.type === "mate") { txt = `${nm(e.pid)} picked ${nm(e.mate)} as their drinking mate`; tag = "Mate"; }
       if (e.type === "rule") { txt = `${nm(e.pid)} made a rule: “${esc(e.text)}”`; tag = "Rule"; }
-      if (e.type === "bomb") { txt = `The Bomb blew up on ${nm(e.pid)} after ${e.passes} ${e.passes === 1 ? "pass" : "passes"}` + (e.timedOut ? ", held too long" : ""); tag = "The Bomb"; }
+      if (e.type === "bomb") { txt = `The Bomb blew up on ${nm(e.pid)}` + (e.secs ? ` after ${e.secs} seconds` : (e.passes ? ` after ${e.passes} passes` : "")); tag = "The Bomb"; }
       if (e.type === "race") { txt = `${SUIT_NAMES[e.suit]} won the Horse Race` + (e.winners.length ? `. Winners: ${e.winners.map(nm).join(", ")}` : ". Nobody backed it"); tag = "Horse Race"; }
       if (e.type === "door") { txt = `${nm(e.pid)} survived The Door and made ${nm(e.victim)} finish their drink`; tag = "The Door"; }
       if (e.type === "big") { txt = `${nm(e.pid)} ${e.kind === "shot" ? "took a shot" : "finished a drink"}` + (e.reason !== "Manual" ? ` (${esc(e.reason)})` : ""); tag = e.kind === "shot" ? "Shot" : "Finished"; }

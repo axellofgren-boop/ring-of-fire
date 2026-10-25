@@ -571,7 +571,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     if (a === "dictator") { ev("crown", { pid: me, from: g.dictator, via: "card" }); g.dictator = me; }
     if (a === "role") { ev("role", { pid: me, rank: sh.rank, from: g.roles[sh.rank] || null }); g.roles[sh.rank] = me; }
     if (a === "mate" && sh.mate) { ev("mate", { pid: me, mate: sh.mate }); g.mates[me] = sh.mate; }
-    if (a === "makerule" && sh.ruleText.trim()) { g.houseRules.push({ text: sh.ruleText.trim(), by: me, rank: sh.rank }); ev("rule", { pid: me, text: sh.ruleText.trim() }); }
+    if (a === "makerule") { g.houseRules.push({ text: sh.ruleText.trim(), by: me, rank: sh.rank }); ev("rule", { pid: me, text: sh.ruleText.trim() }); }
     if (logIt && a === "give") ev("give", { pid: me, n: Object.values(sh.alloc).reduce((x, y) => x + y, 0) });
     if (logIt) {
       if (a === "self") logDrink(me, "sip", sh.n, reason);
@@ -833,7 +833,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     RANKS.filter(r => g.roles && g.roles[r] && S.rules[r].action === "role").forEach(r =>
       powers.push(bar(esc(S.rules[r].name), esc(player(g.roles[r]).name), `<button class="btn small" data-act="penalty" data-k="role:${r}">Log a loser</button>`)));
     (g.houseRules || []).forEach((h, i) =>
-      powers.push(bar("Rule by " + esc(player(h.by).name), esc(h.text), `<button class="btn small" data-act="penalty" data-k="rule:${i}">Broke it</button>`)));
+      powers.push(bar("House rule", esc(ruleLabel(i)), `<button class="btn small" data-act="penalty" data-k="rule:${i}">Broke it</button>`)));
     const mates = Object.entries(g.mates || {});
     if (mates.length) powers.push(`<div class="callout" style="font-size:.92rem"><span class="label">Mates</span><br>${mates.map(([a, b]) => `${esc(player(b).name)} drinks with ${esc(player(a).name)}`).join("<br>")}</div>`);
     const dict = powers.length ? `<div class="stack" style="gap:8px">${powers.join("")}</div>` : "";
@@ -1322,7 +1322,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       if (e.type === "challenge" && e.win) { txt = `${nm(e.pid)} challenged ${nm(e.dictator)} and rolled a ${e.roll}`; tag = "Challenge"; }
       if (e.type === "role") { txt = `${nm(e.pid)} became ${esc(S.rules[e.rank].name)}`; tag = S.rules[e.rank].name; }
       if (e.type === "mate") { txt = `${nm(e.pid)} picked ${nm(e.mate)} as their drinking mate`; tag = "Mate"; }
-      if (e.type === "rule") { txt = `${nm(e.pid)} made a rule: “${esc(e.text)}”`; tag = "Rule"; }
+      if (e.type === "rule") { txt = e.text ? `${nm(e.pid)} made a rule: “${esc(e.text)}”` : `${nm(e.pid)} made a rule`; tag = "Rule"; }
       if (e.type === "bomb") { txt = `The Bomb blew up on ${nm(e.pid)}` + (e.secs ? ` after ${e.secs} seconds` : (e.passes ? ` after ${e.passes} passes` : "")); tag = "The Bomb"; }
       if (e.type === "race") { txt = `${SUIT_NAMES[e.suit]} won the Horse Race` + (e.winners.length ? `. Winners: ${e.winners.map(nm).join(", ")}` : ". Nobody backed it"); tag = "Horse Race"; }
       if (e.type === "door") { txt = `${nm(e.pid)} survived The Door and made ${nm(e.victim)} finish their drink`; tag = "The Door"; }
@@ -1526,7 +1526,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       primary = `Next player`;
     } else if (a === "makerule") {
       action = `<label class="stack" for="houserule"><span class="label">${meName}'s rule</span>
-        <input class="field" id="houserule" data-sheet="ruleText" value="${esc(sh.ruleText)}" placeholder="Only drink with your left hand" maxlength="80"></label>`;
+        <input class="field" id="houserule" data-sheet="ruleText" value="${esc(sh.ruleText)}" placeholder="Optional: only drink with your left hand" maxlength="80"></label>`;
       primary = "Add rule & next player";
     } else if (a === "dictator") {
       const prev = g.dictator && g.dictator !== me ? ` ${esc(player(g.dictator).name)} loses the crown.` : "";
@@ -1580,8 +1580,14 @@ textarea.field { resize: vertical; min-height: 64px; }
   function penaltyInfo(k) {
     const g = S.game, [kind, ref] = k.split(":");
     if (kind === "role") return { title: S.rules[ref].name + " got someone", sub: player(g.roles[ref]).name + " caught who?", reason: S.rules[ref].name, sips: S.rules[ref].sips };
-    const h = g.houseRules[+ref];
-    return { title: "Rule broken", sub: h.text, reason: "Broke rule: " + h.text, sips: (S.rules[h.rank] || S.rules.J).sips };
+    const h = g.houseRules[+ref], label = ruleLabel(+ref);
+    return { title: label + " broken", sub: h.text, reason: "Broke " + label + (h.text ? ": " + h.text : ""), sips: (S.rules[h.rank] || S.rules.J).sips };
+  }
+  // "Axel's rule", or "Axel's rule 2" once someone has made more than one.
+  function ruleLabel(i) {
+    const rules = S.game.houseRules, h = rules[i], name = player(h.by).name;
+    const mine = rules.filter(x => x.by === h.by);
+    return mine.length > 1 ? `${name}'s rule ${mine.indexOf(h) + 1}` : `${name}'s rule`;
   }
   function sheetPenalty(sh) {
     const info = penaltyInfo(sh.k), n = Object.values(sh.picked).filter(Boolean).length;
@@ -1604,8 +1610,9 @@ textarea.field { resize: vertical; min-height: 64px; }
     if (tab === "scores") body = boardBody();
     else if (tab === "rules") {
       const house = g && g.houseRules && g.houseRules.length ? `<span class="label">House rules in play</span>
-        <div class="stack" style="gap:6px">${g.houseRules.map(h => `<div class="callout" style="padding:8px 12px"><b>${esc(h.text)}</b> <span class="muted">by ${esc(player(h.by).name)}</span></div>`).join("")}</div>` : "";
-      body = `<div class="stack" style="gap:6px">${RANKS.map(r => `<div class="callout" style="padding:8px 12px"><b>${r} · ${esc(S.rules[r].name)}</b> <span class="muted">${esc(S.rules[r].text)}</span></div>`).join("")}</div>${house}`;
+        <div class="stack" style="gap:6px">${g.houseRules.map((h, i) => `<div class="callout" style="padding:8px 12px"><b>${esc(ruleLabel(i))}</b> <span class="muted">${h.text ? esc(h.text) : "No details added."}</span></div>`).join("")}</div>
+        <span class="label">Card rules</span>` : "";
+      body = `${house}<div class="stack" style="gap:6px">${RANKS.map(r => `<div class="callout" style="padding:8px 12px"><b>${r} · ${esc(S.rules[r].name)}</b> <span class="muted">${esc(S.rules[r].text)}</span></div>`).join("")}</div>`;
     } else body = `<button class="btn ghost sound-btn" data-act="sound" aria-pressed="${SFX.isOn()}">${SFX.isOn() ? "Sound on: tap to mute" : "Sound off: tap to unmute"}</button>
         <label class="stack" for="freq" style="gap:6px"><span class="label">Mini-games</span>
           <select class="field" id="freq">${FREQ_CHOICES.map(([v, l]) => `<option value="${v}" ${S.freq === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>

@@ -274,7 +274,14 @@ textarea.field { resize: vertical; min-height: 64px; }
 @keyframes spark { 50% { transform: scale(1.5) rotate(35deg); opacity: .75; } }
 .holder { font-family: var(--f-display); font-size: clamp(1.9rem, 9vw, 2.8rem); color: var(--gold); text-align: center; line-height: 1.05; overflow-wrap: anywhere; }
 .bomb-starter { background: var(--surface); border: 1.5px solid var(--gold); border-radius: 18px; padding: 14px; display: grid; gap: 2px; justify-items: center; }
-.boom-svg { width: min(78vw, 320px); height: auto; overflow: visible; }
+.boom-svg { width: min(64vw, 34dvh, 280px); height: auto; overflow: visible; }
+.boom-layout { display: grid; gap: 10px; }
+.boom-side { display: grid; gap: 10px; align-content: center; min-width: 0; }
+.boom-side .panel { gap: 10px; }
+@media (orientation: landscape) and (min-width: 560px) {
+  .boom-layout { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); align-items: center; min-height: calc(100dvh - 40px); }
+  .boom-svg { width: min(38vw, 70dvh, 360px); }
+}
 .boom-svg.pop { animation: boom .7s cubic-bezier(.2,.8,.2,1.3); }
 @keyframes boom { 0% { transform: scale(.15) rotate(-30deg); opacity: 0; } 100% { transform: none; } }
 .wrap.shake { animation: shake .6s; }
@@ -1345,12 +1352,12 @@ textarea.field { resize: vertical; min-height: 64px; }
   }
   function boomSvg(pop) {
     const pts = [];
-    for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2, r = i % 2 ? 44 : 68; pts.push((70 + Math.cos(a) * r).toFixed(1) + "," + (70 + Math.sin(a) * r).toFixed(1)); }
+    for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2, r = i % 2 ? 48 : 68; pts.push((70 + Math.cos(a) * r).toFixed(1) + "," + (70 + Math.sin(a) * r).toFixed(1)); }
     const inner = pts.map(p => p.split(",").map(v => (70 + (v - 70) * 0.72).toFixed(1)).join(",")).join(" ");
     return `<svg class="boom-svg${pop ? " pop" : ""}" viewBox="0 0 140 140" aria-hidden="true">
       <polygon points="${pts.join(" ")}" fill="#ff6a2b" stroke="#fbf3e4" stroke-width="3" stroke-linejoin="round"/>
       <polygon points="${inner}" fill="#f2b33d"/>
-      <text x="70" y="80" text-anchor="middle" font-family="Bungee, Impact, sans-serif" font-size="22" fill="#1d1416">BOOOOM!</text>
+      <text x="70" y="77" text-anchor="middle" textLength="84" lengthAdjust="spacingAndGlyphs" font-family="Bungee, Impact, sans-serif" font-size="18" fill="#1d1416">BOOOOM!</text>
     </svg>`;
   }
 
@@ -1372,14 +1379,14 @@ textarea.field { resize: vertical; min-height: 64px; }
         <div class="callout" style="text-align:center">The fuse is lit. Keep it moving, nobody knows when it blows.</div>`;
     } else {
       const victims = g.order.map(pid => `<button class="chip" data-act="bm-victim" data-id="${pid}" aria-pressed="${b.victim === pid}" ${b.logged ? "disabled" : ""}>${nm(pid)}</button>`).join("");
-      body = `<div class="bomb-stage">${boomSvg(ui.bombShake)}</div>
+      body = `<div class="boom-layout"><div class="bomb-stage">${boomSvg(ui.bombShake)}</div><div class="boom-side">
         ${b.logged
           ? `<div class="bomb-stage"><div class="holder">${nm(b.victim)}</div><div class="verdict bad">takes a shot!</div></div>
              <div class="callout">The fuse was ${b.secs} seconds. The shot is on the scoreboard.</div>
              <button class="btn ${soloOne() ? "fire" : "primary"} wide" data-act="bm-again" ${soloOne() ? 'style="min-height:56px"' : ""}>Light another bomb</button>
              ${soloOne() ? "" : `<button class="btn fire wide" data-act="mini-done" style="min-height:56px">${backTxt()}</button>`}`
           : `<section class="panel"><h2>Who got blown up?</h2><div class="chips">${victims}</div>
-             <button class="btn fire wide" data-act="bm-log" ${b.victim ? "" : "disabled"} style="min-height:56px">${b.victim ? `${nm(b.victim)} takes a shot` : "Tap who was holding it"}</button></section>`}`;
+             <button class="btn fire wide" data-act="bm-log" ${b.victim ? "" : "disabled"} style="min-height:56px">${b.victim ? `${nm(b.victim)} takes a shot` : "Tap who was holding it"}</button></section>`}</div></div>`;
     }
     const shake = ui.bombShake && b.phase === "boom" ? " shake" : "";
     ui.bombShake = false;

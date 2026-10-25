@@ -1,0 +1,15 @@
+/* Dice */
+.die {
+  width: 96px; height: 96px; border-radius: 18px; background: var(--card); margin: 4px auto;
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.45);
+}
+.die i { width: 16px; height: 16px; border-radius: 50%; background: var(--ink); place-self: center; visibility: hidden; }
+.die i.on { visibility: visible; }
+.die.rolling { animation: wobble .12s linear infinite; }
+@keyframes wobble { 0% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } 100% { transform: rotate(-8deg); } }
+.verdict { text-align: center; font-family: var(--f-display); font-size: 1.3rem; }
+.verdict.good { color: var(--good); }
+.verdict.bad { color: var(--bad); }
+.die.landed { animation: land .35s cubic-bezier(.2,.8,.2,1.4); }
+@keyframes land { 0% { transform: scale(1.25) rotate(12deg); } 100% { transform: none; } }

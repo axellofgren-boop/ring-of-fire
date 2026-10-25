@@ -1,0 +1,65 @@
+/* ---------- Sheets ---------- */
+.scrim {
+  position: fixed; inset: 0; background: rgba(10,2,4,.66); z-index: 20;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.scrim.anim { animation: fade .18s ease; }
+.scrim.anim .sheet { animation: rise .26s cubic-bezier(.2,.8,.2,1); }
+.scrim.anim .face { animation: flip .45s cubic-bezier(.2,.8,.2,1); }
+@keyframes fade { from { opacity: 0; } }
+.sheet {
+  width: 100%; max-width: 560px; max-height: 92%; overflow-y: auto;
+  background: var(--surface); border-radius: 22px 22px 0 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: 18px; padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  display: grid; gap: 14px;
+}
+@keyframes rise { from { transform: translateY(30px); opacity: 0; } }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+
+.reveal { display: grid; justify-items: center; gap: 10px; text-align: center; }
+.face {
+  width: auto; height: min(42dvh, 340px); max-width: 62vw; aspect-ratio: 5/7; container-type: inline-size; padding: 0; border: 0; cursor: pointer; border-radius: 10px; background: var(--card); color: var(--ink);
+  position: relative; box-shadow: 0 8px 24px rgba(0,0,0,.45);
+  font-family: var(--f-display);
+}
+@keyframes flip { from { transform: perspective(600px) rotateY(90deg) scale(.9); } }
+.face.red { color: var(--suit-red); }
+.face .corner { position: absolute; left: 6cqw; top: 5cqw; line-height: 1; font-size: 15cqw; text-align: center; }
+.face .corner.br { left: auto; top: auto; right: 6cqw; bottom: 5cqw; transform: rotate(180deg); }
+.face .pip { position: absolute; inset: 0; display: grid; place-items: center; font-size: 46cqw; }
+.reveal .who { color: var(--muted); font-weight: 700; }
+.reveal h2 { font-size: clamp(1.9rem, 8vw, 2.6rem); line-height: 1.05; color: var(--gold); }
+.reveal p { margin: 0; max-width: 40ch; color: var(--muted); }
+.rv-act { display: grid; gap: 12px; align-content: start; }
+/* A card with choices to make shows smaller, so the buttons fit without scrolling. */
+.sheet.rv.busy .face { height: min(26dvh, 210px); }
+/* Fold-away sections: a button that shows or hides what sits under it. */
+.fold { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 0 18px; gap: 10px; text-align: left; }
+.fold .caret { opacity: .7; transition: transform .2s; }
+.fold[aria-expanded="true"] .caret { transform: rotate(180deg); }
+.tabs.end-tabs { grid-template-columns: repeat(4, 1fr); }
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: var(--bg); border-radius: 14px; padding: 4px; }
+.tabs button { border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-weight: 800; min-height: 42px; }
+.tabs button[aria-pressed="true"] { background: var(--surface-2); color: var(--fg); }
+.cog { font-size: 1.5rem; color: var(--gold); }
+
+.alloc { display: grid; gap: 8px; }
+.alloc-row { display: flex; align-items: center; gap: 10px; background: var(--bg); border-radius: 12px; padding: 6px 6px 6px 12px; }
+.alloc-row .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.alloc-row .n { font-family: var(--f-display); width: 28px; text-align: center; font-variant-numeric: tabular-nums; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg); padding: 9px 14px; font-weight: 600; min-height: 42px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.chip[aria-pressed="true"] { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+.callout { background: var(--bg); border-radius: 12px; padding: 12px 14px; }
+
+/* Scoreboard */
+.board { display: grid; gap: 8px; }
+.brow { display: grid; grid-template-columns: 26px minmax(0,1fr) auto; gap: 10px; align-items: center; background: var(--bg); border-radius: 12px; padding: 10px 10px 10px 12px; }
+.brow .pos { font-family: var(--f-display); color: var(--gold); }
+.brow .nm { font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brow .tot { font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.brow .acts { display: flex; gap: 6px; }
+.chip { min-height: 46px; }
+.sound-btn[aria-pressed="false"] { opacity: .55; }

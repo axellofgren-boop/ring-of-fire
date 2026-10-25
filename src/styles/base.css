@@ -1,0 +1,61 @@
+/* Layout: one-screen party app. A ring of face-down cards around the King's Cup is the hero; everything else lives in bottom sheets thumbs can reach. */
+:root {
+  --bg: #24090f;          /* oxblood bar-room */
+  --surface: #36101a;
+  --surface-2: #4a1824;
+  --line: #5e2433;
+  --fg: #fbeee2;
+  --muted: #c99ea0;
+  --gold: #f2b33d;
+  --flame: #ff6a2b;
+  --card: #fbf3e4;
+  --ink: #1d1416;
+  --suit-red: #c8222f;
+  --good: #7fd18b;
+  --bad: #ff7a6b;
+  --f-display: "Bungee", "Impact", "Arial Black", sans-serif;
+  --f-body: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  background-image: radial-gradient(120% 70% at 50% 0%, #3d0f19 0%, var(--bg) 60%);
+  color: var(--fg);
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-tap-highlight-color: transparent;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.wrap {
+  max-width: 560px; margin: 0 auto; min-height: 100%;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px 32px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+h1, h2, h3 { font-family: var(--f-display); font-weight: 400; margin: 0; text-wrap: balance; letter-spacing: .01em; }
+h2 { font-size: 1.35rem; }
+.label { font-size: .75rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 600; }
+.muted { color: var(--muted); }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+
+.btn {
+  border: 0; border-radius: 14px; padding: 14px 18px; font-weight: 800;
+  background: var(--surface-2); color: var(--fg); min-height: 48px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn:active { transform: translateY(1px); }
+.btn[disabled] { opacity: .4; cursor: not-allowed; }
+.btn.primary { background: var(--gold); color: var(--ink); }
+.btn.fire { background: linear-gradient(180deg, var(--gold), var(--flame)); color: var(--ink); }
+.btn.ghost { background: transparent; border: 1.5px solid var(--line); }
+.btn.small { min-height: 38px; padding: 8px 12px; border-radius: 10px; font-size: .9rem; }
+.btn.wide { width: 100%; }
+.iconbtn { width: 44px; height: 44px; border-radius: 12px; border: 0; background: var(--surface-2); display: inline-grid; place-items: center; font-weight: 800; flex: none; }
+

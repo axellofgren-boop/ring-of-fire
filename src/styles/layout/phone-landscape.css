@@ -1,0 +1,5 @@
+/* ---------- Phone on its side (the main way the game is played, often mirrored to a TV) ----------
+   Short screen: everything in landscape.css is already sized for it. Tweaks for very small phones go here. */
+@media (orientation: landscape) and (max-height: 600px) {
+  .wrap.game { column-gap: clamp(12px, 3vw, 28px); }
+}

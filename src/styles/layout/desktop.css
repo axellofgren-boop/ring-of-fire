@@ -1,0 +1,35 @@
+/* ---------- Laptop, desktop and TV ----------
+   Lots of room: a big ring on the left, and a roomier turn panel and role tiles centred beside it. */
+@media (orientation: landscape) and (min-height: 601px) {
+  .wrap.game {
+    max-width: 1680px;
+    grid-template-columns: minmax(0, 1fr) clamp(320px, 30vw, 520px);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: clamp(28px, 4vw, 80px); row-gap: 16px;
+    padding-block: max(24px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-bottom, 0px));
+  }
+  /* Turn panel just above the middle of the screen, roles just below it. */
+  .game .g-side { align-self: end; gap: 12px; }
+  .game .g-extra { align-self: start; max-height: 100%; }
+  .game .stat b { font-size: 1.5rem; }
+  .game .stat .label { font-size: .85rem; }
+  .game .iconbtn.cog { width: 52px; height: 52px; font-size: 1.4rem; }
+  .game .turn { padding: 14px 22px 18px; row-gap: 4px; }
+  .game .turn > .label { font-size: .8rem; }
+  .game .turn .now { font-size: clamp(2.4rem, 6vh, 4.2rem); }
+  .game .turn .next { font-size: 1.15rem; }
+  .powers { gap: 10px; }
+  .dictator-bar { padding: 12px; gap: 10px; border-radius: 16px; }
+  .dictator-bar .who .label { font-size: .78rem; }
+  .dictator-bar .who b { font-size: 1.15rem; }
+  .dictator-bar .btn.small { min-height: 42px; font-size: 1rem; }
+  .mates-line { font-size: 1.05rem; }
+
+  /* Pop-up cards grow with the screen so they read from the sofa. */
+  .sheet { max-width: 980px; padding: 24px 28px; }
+  .sheet.rv .reveal { width: calc(min(62dvh, 600px) * 5 / 7); }
+  .sheet.rv .reveal .face { height: min(62dvh, 600px); }
+  .sheet.rv .reveal h2 { font-size: clamp(2rem, 6vh, 3.2rem); }
+  .sheet.rv.busy .reveal { width: calc(min(50dvh, 460px) * 5 / 7); }
+  .sheet.rv.busy .reveal .face { height: min(50dvh, 460px); }
+}

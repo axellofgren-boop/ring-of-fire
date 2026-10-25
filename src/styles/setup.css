@@ -1,0 +1,25 @@
+/* ---------- Setup ---------- */
+.hero { text-align: center; padding-top: 8px; display: grid; gap: 6px; justify-items: center; }
+.hero h1 { font-size: clamp(2.4rem, 12vw, 3.6rem); line-height: .95; color: var(--gold); text-shadow: 0 3px 0 #7a1d12, 0 0 28px rgba(255,106,43,.35); }
+.hero p { margin: 0; color: var(--muted); max-width: 32ch; }
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mode {
+  text-align: left; border-radius: 16px; padding: 14px; border: 2px solid var(--line);
+  background: var(--surface); display: grid; gap: 4px; min-width: 0;
+}
+.mode b { font-family: var(--f-display); font-weight: 400; font-size: 1.05rem; }
+.mode span { font-size: .85rem; color: var(--muted); }
+.solo-cog { position: fixed; z-index: 5; top: max(12px, env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); }
+.mode[aria-pressed="true"] { border-color: var(--gold); background: var(--surface-2); box-shadow: 0 0 0 3px rgba(242,179,61,.18); }
+.panel { background: var(--surface); border-radius: 18px; padding: 16px; display: grid; gap: 12px; }
+.player-row { display: flex; gap: 8px; align-items: center; }
+.player-row .num { font-family: var(--f-display); width: 28px; text-align: center; color: var(--gold); flex: none; }
+.player-row input { flex: 1; min-width: 0; }
+.field {
+  background: var(--bg); border: 1.5px solid var(--line); border-radius: 12px;
+  padding: 11px 12px; min-height: 46px; width: 100%;
+}
+.field:focus { border-color: var(--gold); outline: none; }
+textarea.field { resize: vertical; min-height: 64px; }
+
+.banner { background: var(--surface-2); border-radius: 14px; padding: 12px 14px; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }

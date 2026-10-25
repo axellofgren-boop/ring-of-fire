@@ -1,0 +1,11 @@
+/* ---------- Phone held upright ----------
+   One column: whose turn on top, the ring fills the middle, roles underneath. The ring screen never scrolls. */
+@media (orientation: portrait) {
+  .g-side, .g-main, .g-extra { display: contents; }
+  .wrap.game { height: 100dvh; min-height: 0; padding-block: max(10px, env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-bottom, 0px)); gap: 10px; }
+  .game .turn { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; text-align: left; }
+  .game .turn > .label { display: none; }
+  .game .turn .now { font-size: clamp(1.6rem, 7vw, 2.2rem); }
+  .game .g-main { display: block; flex: 1; }
+  .game .g-extra { display: block; flex: none; max-height: 42dvh; overflow-y: auto; }
+}

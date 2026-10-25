@@ -1,0 +1,36 @@
+# Runs on every pull request and every push to main: lint, check index.html was rebuilt, game-logic tests,
+# then the layout checks in a real browser at phone portrait, phone landscape, desktop and six more sizes.
+# The screenshots of every screen are attached to the run so changes can be looked at before merging.
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run lint
+      - name: index.html is rebuilt from src/
+        run: npm run build -- --check
+      - run: npm run test:unit
+      - run: npm run test:e2e
+      - name: Screenshots of every screen
+        if: always()
+        run: npm run screens
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: screens/
+          retention-days: 14

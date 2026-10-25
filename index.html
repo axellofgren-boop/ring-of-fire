@@ -439,7 +439,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     "3": { name: "Give or drink 3", text: "Red suit: choose someone to drink 3 sips. Black suit: you drink 3 sips.", action: "suit", sips: 3 },
     "4": { name: "Give or drink 4", text: "Red suit: choose someone to drink 4 sips. Black suit: you drink 4 sips.", action: "suit", sips: 4 },
     "5": { name: "Give or drink 5", text: "Red suit: choose someone to drink 5 sips. Black suit: you drink 5 sips.", action: "suit", sips: 5 },
-    "6": { name: "Thumb Master", text: "Put your thumb on the table whenever you like. Everyone must follow, and the last one drinks. You stay Thumb Master until someone else picks a 6.", action: "role", sips: 2 },
+    "6": { name: "Thumb Master", text: "Once, whenever you like, put your thumb on the table. Everyone must follow, and the last one drinks. Then your power is used up.", action: "role", sips: 2, once: true },
     "7": { name: "Heaven", text: "Point your finger at the sky. Whoever is last must drink.", action: "pick", sips: 2 },
     "8": { name: "Mate", text: "Choose a drinking buddy. They drink every time you drink, for the rest of the game.", action: "mate", sips: 0 },
     "9": { name: "Rhyme", text: "Say a word, like fog. The next person rhymes it (dog) and it goes round the circle until someone messes up and drinks.", action: "pick", sips: 2 },
@@ -575,7 +575,6 @@ textarea.field { resize: vertical; min-height: 64px; }
     if (logIt && a === "give") ev("give", { pid: me, n: Object.values(sh.alloc).reduce((x, y) => x + y, 0) });
     if (logIt) {
       if (a === "self") logDrink(me, "sip", sh.n, reason);
-      if (a === "all") g.order.forEach(pid => logDrink(pid, "sip", sh.n, reason, new Set(g.order)));
       if (a === "give") Object.entries(sh.alloc).forEach(([pid, n]) => logDrink(pid, "sip", n, reason));
       if (a === "pick") Object.keys(sh.picked).filter(k => sh.picked[k]).forEach((pid, _, arr) => logDrink(pid, "sip", sh.n, reason, new Set(arr)));
     }
@@ -831,7 +830,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     const powers = [];
     if (g.dictator) powers.push(bar("Dictator", esc(player(g.dictator).name), `<button class="btn small primary" data-act="challenge">Challenge</button>`));
     RANKS.filter(r => g.roles && g.roles[r] && S.rules[r].action === "role").forEach(r =>
-      powers.push(bar(esc(S.rules[r].name), esc(player(g.roles[r]).name), `<button class="btn small" data-act="penalty" data-k="role:${r}">Log a loser</button>`)));
+      powers.push(bar(esc(S.rules[r].name), esc(player(g.roles[r]).name), `<button class="btn small" data-act="penalty" data-k="role:${r}">${roleOnce(r) ? "Use it" : "Log a loser"}</button>`)));
     (g.houseRules || []).forEach((h, i) =>
       powers.push(bar("House rule", esc(ruleLabel(i)), `<button class="btn small" data-act="penalty" data-k="rule:${i}">Broke it</button>`)));
     const mates = Object.entries(g.mates || {});
@@ -1321,6 +1320,7 @@ textarea.field { resize: vertical; min-height: 64px; }
       if (e.type === "challenge" && !e.win) { txt = `${nm(e.pid)} challenged ${nm(e.dictator)}, rolled a ${e.roll} and failed`; tag = "Challenge"; }
       if (e.type === "challenge" && e.win) { txt = `${nm(e.pid)} challenged ${nm(e.dictator)} and rolled a ${e.roll}`; tag = "Challenge"; }
       if (e.type === "role") { txt = `${nm(e.pid)} became ${esc(S.rules[e.rank].name)}`; tag = S.rules[e.rank].name; }
+      if (e.type === "used") { txt = `${nm(e.pid)} used their ${esc(S.rules[e.rank].name)} power`; tag = S.rules[e.rank].name; }
       if (e.type === "mate") { txt = `${nm(e.pid)} picked ${nm(e.mate)} as their drinking mate`; tag = "Mate"; }
       if (e.type === "rule") { txt = e.text ? `${nm(e.pid)} made a rule: “${esc(e.text)}”` : `${nm(e.pid)} made a rule`; tag = "Rule"; }
       if (e.type === "bomb") { txt = `The Bomb blew up on ${nm(e.pid)}` + (e.secs ? ` after ${e.secs} seconds` : (e.passes ? ` after ${e.passes} passes` : "")); tag = "The Bomb"; }
@@ -1495,8 +1495,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     } else if (a === "self") {
       primary = `Drink ${sh.n} & next player`;
     } else if (a === "all") {
-      action = stepper;
-      primary = `Log ${sh.n} each & next`;
+      primary = "Next player";
     } else if (a === "give") {
       const used = Object.values(sh.alloc).reduce((x, y) => x + y, 0);
       const left = sh.n - used;
@@ -1535,7 +1534,7 @@ textarea.field { resize: vertical; min-height: 64px; }
     return `<div class="reveal">${face}<div class="who">${meName}</div><h2>${esc(rule.action === "suit" && sh.color ? (sh.color === "red" ? "Give " : "Drink ") + sh.n : rule.name)}</h2>${sh.peek ? `<p>${esc(rule.text)}</p>` : ""}</div>
       <div class="rv-act">${action}
       <button class="btn fire wide" data-act="reveal-ok" ${canConfirm ? "" : "disabled"}>${esc(primary)}</button>
-      ${["self", "all", "give", "pick"].includes(a) ? `<button class="btn ghost wide" data-act="reveal-skip">Skip logging, next player</button>` : ""}</div>`;
+      ${["self", "give", "pick"].includes(a) ? `<button class="btn ghost wide" data-act="reveal-skip">Skip logging, next player</button>` : ""}</div>`;
   }
 
   function boardBody() {
@@ -1576,6 +1575,8 @@ textarea.field { resize: vertical; min-height: 64px; }
     return `<div class="sheet-head"><h2>Challenge the Dictator</h2>${sh.result || sh.rolling ? "" : `<button class="iconbtn" data-act="close" aria-label="Close">&times;</button>`}</div>${body}`;
   }
 
+  // One-use roles (Thumb Master) end as soon as a loser is logged.
+  function roleOnce(r) { const x = S.rules[r]; return x.once !== undefined ? !!x.once : !!(DEFAULT_RULES[r] && DEFAULT_RULES[r].once); }
   function penaltyInfo(k) {
     const g = S.game, [kind, ref] = k.split(":");
     if (kind === "role") return { title: S.rules[ref].name + " got someone", sub: player(g.roles[ref]).name + " caught who?", reason: S.rules[ref].name, sips: S.rules[ref].sips };
@@ -1683,7 +1684,10 @@ textarea.field { resize: vertical; min-height: 64px; }
       case "mate": sh.mate = id; break;
       case "penalty": ui.sheet = { type: "penalty", k: el.dataset.k, picked: {}, n: penaltyInfo(el.dataset.k).sips || 1 }; break;
       case "penalty-ok": { const n0 = g.log.length; setTimeout(() => toastSince(n0), 0); const info = penaltyInfo(sh.k), arr = Object.keys(sh.picked).filter(k => sh.picked[k]);
-        arr.forEach(pid => logDrink(pid, "sip", sh.n, info.reason, new Set(arr))); ui.sheet = null; break; }
+        arr.forEach(pid => logDrink(pid, "sip", sh.n, info.reason, new Set(arr)));
+        const [kind, ref] = sh.k.split(":");
+        if (kind === "role" && roleOnce(ref) && g.roles[ref]) { ev("used", { pid: g.roles[ref], rank: ref }); delete g.roles[ref]; }
+        ui.sheet = null; break; }
       case "reveal-ok": confirmReveal(true); return;
       case "reveal-skip": confirmReveal(false); return;
       case "board": ui.sheet = { type: "menu", tab: "scores" }; break;

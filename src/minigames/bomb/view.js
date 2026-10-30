@@ -32,7 +32,7 @@ export function viewBomb(b) {
     body = `<div class="mini-hero" style="padding-top:8px;gap:4px">${after}<h1>The Bomb</h1></div>
       <div class="bomb-stage">${bombSvg(false)}</div>
       <div class="bomb-starter"><span class="label">Starts with the bomb</span><div class="holder">${nm(b.starter)}</div></div>
-      ${fold("howto", "How to play", `<div class="callout">Grab something to be the bomb and pass it around the table. A <b>hidden timer</b> is running, somewhere between 30 seconds and 3 minutes. Whoever is holding it when it goes <b>BOOM</b> takes a shot.</div>`)}
+      ${fold("howto", "How to play", `<div class="callout">Grab something to be the bomb and pass it around the table. A <b>hidden timer</b> is running, somewhere between 20 seconds and a minute and a half. Whoever is holding it when it goes <b>BOOM</b> takes a shot.</div>`)}
       <button class="btn fire wide" data-act="bm-light" style="min-height:56px">Light the fuse</button>
       ${soloOne() ? "" : `<button class="btn ghost wide" data-act="mini-done">Skip The Bomb</button>`}`;
   } else if (b.phase === "live") {

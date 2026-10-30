@@ -4,9 +4,9 @@ import { ev } from "../../core/game.js";
 import { S, save, ui } from "../../core/state.js";
 
 // ---------- The Bomb ----------
-// Played off screen: a random player starts, the bomb goes round the table by hand, and a hidden timer (30s to 3min) decides when it blows.
-export const BOMB_MIN = 30;
-export const BOMB_MAX = 180;
+// Played off screen: a random player starts, the bomb goes round the table by hand, and a hidden timer (20s to 90s) decides when it blows.
+export const BOMB_MIN = 20;
+export const BOMB_MAX = 90;
 export function newBomb() {
   const o = S.game.order;
   return { phase: "setup", starter: o[Math.floor(Math.random() * o.length)], deadline: 0, secs: 0, victim: null, logged: false };

@@ -737,9 +737,9 @@ function flash() {
 
 // ===== minigames/bomb/logic.js =====
 // ---------- The Bomb ----------
-// Played off screen: a random player starts, the bomb goes round the table by hand, and a hidden timer (30s to 3min) decides when it blows.
-const BOMB_MIN = 30;
-const BOMB_MAX = 180;
+// Played off screen: a random player starts, the bomb goes round the table by hand, and a hidden timer (20s to 90s) decides when it blows.
+const BOMB_MIN = 20;
+const BOMB_MAX = 90;
 function newBomb() {
   const o = S.game.order;
   return { phase: "setup", starter: o[Math.floor(Math.random() * o.length)], deadline: 0, secs: 0, victim: null, logged: false };
@@ -1661,7 +1661,7 @@ function viewBomb(b) {
     body = `<div class="mini-hero" style="padding-top:8px;gap:4px">${after}<h1>The Bomb</h1></div>
       <div class="bomb-stage">${bombSvg(false)}</div>
       <div class="bomb-starter"><span class="label">Starts with the bomb</span><div class="holder">${nm(b.starter)}</div></div>
-      ${fold("howto", "How to play", `<div class="callout">Grab something to be the bomb and pass it around the table. A <b>hidden timer</b> is running, somewhere between 30 seconds and 3 minutes. Whoever is holding it when it goes <b>BOOM</b> takes a shot.</div>`)}
+      ${fold("howto", "How to play", `<div class="callout">Grab something to be the bomb and pass it around the table. A <b>hidden timer</b> is running, somewhere between 20 seconds and a minute and a half. Whoever is holding it when it goes <b>BOOM</b> takes a shot.</div>`)}
       <button class="btn fire wide" data-act="bm-light" style="min-height:56px">Light the fuse</button>
       ${soloOne() ? "" : `<button class="btn ghost wide" data-act="mini-done">Skip The Bomb</button>`}`;
   } else if (b.phase === "live") {

@@ -29,7 +29,7 @@ test("Horse Race: first horse past the last card wins; winners hand out double, 
   assert.equal(drank(w), 0);
 });
 
-test("The Bomb: hidden timer between 30 seconds and 3 minutes, the holder takes a shot", () => {
+test("The Bomb: hidden timer between 20 and 90 seconds, the holder takes a shot", () => {
   const g = newGame(undefined, { solo: ["The Bomb"] });
   bombAct("bm-light", {});
   const b = g.bomb;

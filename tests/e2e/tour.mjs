@@ -135,6 +135,9 @@ export const FLOWS = [
       await shot("door-pick");
       // Each player takes the next door along, so the doors split the table and someone is soon the last one standing.
       const pickDoor = async d => act(page, `[data-act="dr-door"] >> nth=${Object.keys(d.picks).length % d.safe.length}`);
+      // Caught mid-glow, so the picture shows which door the first player just chose.
+      await act(page, '[data-act="dr-door"] >> nth=0', { wait: 300 });
+      await shot("door-picked");
       for (let s = await saved(page); s.game.door.phase === "pick"; s = await saved(page)) await pickDoor(s.game.door);
       await shot("door-reveal");
       for (let s = await saved(page), guard = 0; s.game.door.phase === "reveal" || s.game.door.phase === "pick"; s = await saved(page)) {

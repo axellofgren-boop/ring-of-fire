@@ -17,13 +17,15 @@ export function viewDoor(d) {
       </section>`;
   }
   const reveal = d.phase === "reveal", anim = reveal && ui.doorAnim, picker = reveal ? null : doorPicker(d);
-  ui.doorAnim = false;
+  const tap = !reveal && ui.doorTap; // the door just picked glows for a moment
+  ui.doorAnim = false; ui.doorTap = null;
   const doors = d.safe.map((safe, i) => {
     const who = Object.keys(d.picks).filter(pid => d.picks[pid] === i);
     const tags = !reveal ? "" : who.map(pid => `<span class="door-tag ${reveal ? (safe ? "in" : "out") : ""}">${nm(pid)}</span>`).join("");
-    return `<button class="door-slot" data-act="dr-door" data-k="${i}" ${reveal ? "disabled" : ""} aria-label="Door ${i + 1}">
+    return `<button class="door-slot ${tap && tap.k === i ? "tapped" : ""}" data-act="dr-door" data-k="${i}" ${reveal ? "disabled" : ""} aria-label="Door ${i + 1}">
       <div class="door-frame ${reveal ? (safe ? "safe" : "trap") : ""} ${anim && !safe ? "anim" : ""}" ${anim && !safe ? `style="animation-delay:${1 + i * 0.2}s"` : ""}>
         <div class="door-behind">${reveal ? (safe ? "<b>✓</b><span>SAFE</span>" : "<b>☠</b><span>TRAP</span>") : ""}</div>
+        ${tap && tap.k === i ? `<span class="door-pick" aria-hidden="true">✓</span>` : ""}
         <div class="door-leaf ${reveal ? "open" : ""} ${anim ? "anim" : ""}" ${anim ? `style="animation-delay:${i * 0.2}s"` : ""}><span class="door-num">${i + 1}</span><i class="knob"></i></div>
       </div>
       ${reveal ? `<div class="door-tags">${tags}</div>` : ""}
@@ -33,7 +35,12 @@ export function viewDoor(d) {
     <div class="door-row" style="--n:${d.safe.length}">${doors}</div>`;
   if (!reveal) {
     const done = d.alive.filter(pid => d.picks[pid] != null).length;
-    return `<div class="door-turn" aria-live="polite"><span class="label">Pick ${done + 1} of ${d.alive.length}</span><b>${nm(picker)}</b><span class="muted">tap a door</span></div>
+    // Right after a pick, the hint line says which door was taken.
+    const hint = tap ? `<span class="door-locked">✓ ${nm(tap.pid)} picked door ${tap.k + 1}</span>` : `<span class="muted">tap a door</span>`;
+    const turn = picker
+      ? `<span class="label">Pick ${done + 1} of ${d.alive.length}</span><b>${nm(picker)}</b>${hint}`
+      : `<span class="label">Everyone has picked</span><b>Opening…</b>${hint}`;
+    return `<div class="door-turn" aria-live="polite">${turn}</div>
       <section class="panel">${head}</section>
       ${d.round === 1 && !done ? `${soloOne() ? "" : `<button class="btn ghost wide" data-act="mini-done">Skip The Door</button>`}` : ""}`;
   }

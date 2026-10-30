@@ -4,7 +4,7 @@ import { S } from "../../src/core/state.js";
 import { clearBomb } from "../../src/core/minis.js";
 import { raceAct, raceWinners } from "../../src/minigames/horse-race/logic.js";
 import { bombAct, explode, BOMB_MIN, BOMB_MAX } from "../../src/minigames/bomb/logic.js";
-import { doorAct, newDoor } from "../../src/minigames/door/logic.js";
+import { doorAct, newDoor, openDoors } from "../../src/minigames/door/logic.js";
 import { impostorAct, newImpostor } from "../../src/minigames/impostor/logic.js";
 import { newGame, drank } from "./helpers.mjs";
 
@@ -60,6 +60,7 @@ test("The Door: trap pickers are out, the last one standing makes someone finish
     const safe = d.safe.indexOf(true), trap = d.safe.indexOf(false);
     // The first player still in always picks safe, everyone else picks the trap.
     d.alive.forEach((pid, i) => doorAct("dr-door", { k: String(i === 0 ? safe : trap) }));
+    openDoors(); // the app opens them after a short pause
     if (!d.winner) doorAct("dr-next", {});
   }
   assert.equal(d.winner, "a");
@@ -111,4 +112,17 @@ test("The Impostor: a tied vote costs nobody a shot", () => {
   const m = playImpostor(() => "none");
   assert.equal(m.win, true);
   S.game.order.forEach(p => assert.equal(drank(p, "shot"), 0));
+});
+
+test("The Door: the last pick holds the doors shut for a moment, then they open", () => {
+  const g = newGame(undefined, { solo: ["The Door"] });
+  const d = g.door;
+  d.alive.forEach(() => doorAct("dr-door", { k: "0" }));
+  assert.equal(d.phase, "pick");
+  assert.ok(d.lock);
+  doorAct("dr-door", { k: "1" });
+  assert.ok(Object.values(d.picks).every(k => k === 0), "taps while the doors are about to open are ignored");
+  assert.ok(openDoors());
+  assert.equal(d.phase, "reveal");
+  assert.ok(!openDoors(), "the doors only open once");
 });

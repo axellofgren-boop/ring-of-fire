@@ -12,7 +12,8 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
   e.respondWith(
-    fetch(e.request).then(res => {
+    // no-cache: always ask GitHub Pages whether there is a newer file, instead of using the browser's 10-minute copy.
+    fetch(new URL(e.request.url).origin === location.origin ? e.request.url : e.request, { cache: "no-cache" }).then(res => {
       const copy = res.clone();
       caches.open(CACHE).then(c => c.put(e.request, copy));
       return res;

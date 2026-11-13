@@ -1,6 +1,6 @@
-import { S } from "../core/state.js";
+import { S, ui } from "../core/state.js";
 import { playRaceDraw } from "../minigames/horse-race/anim.js";
-import { flipAnimate } from "./effects.js";
+import { flipAnimate, flyFromRing } from "./effects.js";
 import { viewSheet } from "./sheets.js";
 import { viewEnd } from "./views/end.js";
 import { viewHalf } from "./views/halftime.js";
@@ -25,6 +25,7 @@ export function render() {
   if (scr === "mini") html += `<button class="iconbtn cog solo-cog" data-act="menu" aria-label="Scores and settings">&#9881;&#65038;</button>`;
   app.innerHTML = html + viewSheet();
   if (scr === "game") layoutRing();
+  if (ui.drawFrom) { flyFromRing(ui.drawFrom); ui.drawFrom = null; }
   // A fresh Horse Race draw plays out step by step; anything else just slides into place.
   if (!(scr === "mini" && S.game.race && playRaceDraw(S.game.race, before))) flipAnimate(before);
 }

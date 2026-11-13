@@ -201,6 +201,9 @@ textarea.field { resize: vertical; min-height: 64px; }
   font-family: var(--f-display);
 }
 @keyframes flip { from { transform: perspective(600px) rotateY(90deg) scale(.9); } }
+/* While the card flies out of the ring (flyFromRing), its back covers the face until it turns over. */
+.face.flying::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: repeating-linear-gradient(45deg, #7d1d2a 0 4px, #5c1220 4px 8px); border: 2px solid #f6dfb0; animation: backside .62s steps(1, end) forwards; }
+@keyframes backside { 0% { opacity: 1; } 58% { opacity: 0; } 100% { opacity: 0; } }
 .face.red { color: var(--suit-red); }
 .face .corner { position: absolute; left: 6cqw; top: 5cqw; line-height: 1; font-size: 15cqw; text-align: center; }
 .face .corner.br { left: auto; top: auto; right: 6cqw; bottom: 5cqw; transform: rotate(180deg); }
@@ -797,6 +800,28 @@ function flipAnimate(before) {
 function flash() {
   if (reduceMotion()) return;
   const f = document.createElement("div"); f.className = "flash"; document.body.appendChild(f); setTimeout(() => f.remove(), 750);
+}
+
+// Where a ring card sits on screen (centre, height, tilt), so the big card can fly out from there.
+function ringSpot(el) {
+  if (!el || reduceMotion()) return null;
+  const b = el.getBoundingClientRect(), a = el.style.transform.match(/rotate\(([-\d.]+)deg\)/);
+  return { x: b.left + b.width / 2, y: b.top + b.height / 2, h: el.offsetHeight, a: a ? +a[1] : 0 };
+}
+// The drawn card leaves the ring face down, grows as it flies to the middle and turns over on the way.
+function flyFromRing(from) {
+  const face = document.querySelector(".scrim.anim .face");
+  if (!from || !face || reduceMotion()) return;
+  const b = face.getBoundingClientRect();
+  const dx = from.x - (b.left + b.width / 2), dy = from.y - (b.top + b.height / 2), s = from.h / b.height;
+  const tilt = ((from.a % 360) + 540) % 360 - 180; // shortest way back to upright
+  face.classList.add("flying");
+  face.animate([
+    { transform: `translate(${dx}px, ${dy}px) rotate(${tilt}deg) scale(${s}) rotateY(180deg)` },
+    { transform: `translate(${dx * 0.4}px, ${dy * 0.4 - 30}px) rotate(${tilt * 0.3}deg) scale(${(s + 1) / 2}) rotateY(150deg)`, offset: 0.4 },
+    { transform: "translate(0, -10px) scale(1.06) rotateY(0deg)", offset: 0.82 },
+    { transform: "none" }
+  ], { duration: 620, easing: "cubic-bezier(.3,.7,.3,1)" }).onfinish = () => face.classList.remove("flying");
 }
 
 // ===== minigames/horse-race/anim.js =====
@@ -2232,6 +2257,7 @@ function render() {
   if (scr === "mini") html += `<button class="iconbtn cog solo-cog" data-act="menu" aria-label="Scores and settings">&#9881;&#65038;</button>`;
   app.innerHTML = html + viewSheet();
   if (scr === "game") layoutRing();
+  if (ui.drawFrom) { flyFromRing(ui.drawFrom); ui.drawFrom = null; }
   // A fresh Horse Race draw plays out step by step; anything else just slides into place.
   if (!(scr === "mini" && S.game.race && playRaceDraw(S.game.race, before))) flipAnimate(before);
 }
@@ -2290,6 +2316,7 @@ app.addEventListener("click", e => {
     case "draw": {
       if (ui.pulling) return;
       SFX.play("flip"); buzz(15);
+      ui.drawFrom = ringSpot(el);
       if (reduceMotion()) { drawCard(+id); return; }
       ui.pulling = true;
       el.classList.add("pulling");
@@ -2301,7 +2328,7 @@ app.addEventListener("click", e => {
     case "half-pick": g.half.pick = g.half.pick === el.dataset.k ? null : el.dataset.k; break;
     case "half-ok": punishLast(); return;
     case "half-skip": finishHalf(); return;
-    case "random": { const left = g.deck.filter(c => !c.drawn); if (left.length) drawCard(left[Math.floor(Math.random() * left.length)].id); return; }
+    case "random": { const left = g.deck.filter(c => !c.drawn); if (left.length) { const c = left[Math.floor(Math.random() * left.length)]; ui.drawFrom = ringSpot(app.querySelector(`.rc[data-id="${c.id}"]`)); drawCard(c.id); } return; }
     case "alloc": { const d = +el.dataset.d; const used = Object.values(sh.alloc).reduce((a, b) => a + b, 0);
       const v = (sh.alloc[id] || 0) + d; if (v >= 0 && (d < 0 || used < sh.n)) sh.alloc[id] = v; if (!sh.alloc[id]) delete sh.alloc[id]; break; }
     case "pick": sh.picked[id] = !sh.picked[id]; break;

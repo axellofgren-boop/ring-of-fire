@@ -1,5 +1,5 @@
 // Caches the whole game on first visit so it opens with no internet. VERSION changes on every build.
-const CACHE = "ring-of-fire-97497631cd";
+const CACHE = "ring-of-fire-e071e83d3f";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", e => {

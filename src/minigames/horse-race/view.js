@@ -5,6 +5,13 @@ import { esc } from "../../core/util.js";
 import { fold } from "../../ui/components.js";
 import { raceLosers, raceWinners, SUIT_NAMES } from "./logic.js";
 
+// A playing card that can turn over: the face, and the back that shows while anim.js flips it.
+export function raceCard(c, cls) {
+  const red = SUITS[c.suit].red ? "red-suit" : "", s = SUITS[c.suit].s;
+  return `<div class="flipcard ${cls} ${red}" aria-label="${c.rank} of ${SUIT_NAMES[c.suit]}">
+    <div class="fc-face"><span class="fc-corner">${c.rank}<br>${s}</span><span class="fc-pip">${c.rank}${s}</span><span class="fc-corner br">${c.rank}<br>${s}</span></div>
+    <div class="fc-back"></div></div>`;
+}
 export function suitGlyph(si) { return `<span class="${SUITS[si].red ? "red-suit" : ""}">${SUITS[si].s}</span>`; }
 
 export function viewRace(r) {
@@ -40,8 +47,11 @@ export function viewRace(r) {
   const horse = si => `<div class="horse ${SUITS[si].red ? "red-suit" : ""} ${r.last && r.last.suit === si ? "moved" : ""}" data-flip="horse-${si}">A${SUITS[si].s}</div>`;
   let rows = `<div class="tk-side tk-finish">FIN</div>${[0, 1, 2, 3].map(si => `<div class="tk-cell tk-finish">${r.winner === si ? horse(si) : ""}</div>`).join("")}`;
   for (let k = r.len; k >= 0; k--) {
+    const sc = r.side[k - 1];
     const side = k === 0 ? `<div class="tk-side tk-start">GO</div>`
-      : k <= r.sideUp ? `<div class="tk-side up ${SUITS[r.side[k - 1].suit].red ? "red-suit" : ""} ${r.lastSide && k === r.sideUp ? "flipnew" : ""}">${r.side[k - 1].rank}${SUITS[r.side[k - 1].suit].s}</div>`
+      : k <= r.sideUp ? (r.lastSide && k === r.sideUp
+        ? raceCard(sc, "tk-side flipnew")
+        : `<div class="tk-side up ${SUITS[sc.suit].red ? "red-suit" : ""}">${sc.rank}${SUITS[sc.suit].s}</div>`)
       : `<div class="tk-side down"></div>`;
     rows += side + [0, 1, 2, 3].map(si => {
       const here = r.winner !== si && r.pos[si] === k;
@@ -50,13 +60,19 @@ export function viewRace(r) {
   }
   const backers = si => g.order.filter(pid => r.bets[pid].suit === si).map(pid => esc(player(pid).name)).join(", ") || "nobody";
   const legend = [0, 1, 2, 3].map(si => `<div class="lg">${suitGlyph(si)} <span>${backers(si)}</span></div>`).join("");
-  const track = `<div class="track" style="grid-template-rows:repeat(${r.len + 2}, minmax(34px, 1fr))">${rows}</div><div class="legend">${legend}</div>`;
+  const track = `<div class="hr-track"><div class="track" style="--rows:${r.len + 2}">${rows}</div></div>`;
+  // The draw pile: the deck, and the card just drawn beside it (anim.js flies it over from the deck).
+  const draw = `<div class="hr-draw">
+      <div class="hr-deck" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="hr-drawn">${r.last ? raceCard(r.last, "hr-card") : `<div class="hr-slot" aria-hidden="true">?</div>`}</div>
+    </div>`;
   if (r.phase === "race") {
     const msg = r.last
-      ? `${r.last.rank}${suitGlyph(r.last.suit)} flipped: <b>${SUIT_NAMES[r.last.suit]}</b> moves up.` + (r.lastSide ? ` Side card ${r.lastSide.rank}${suitGlyph(r.lastSide.suit)}: <b>${SUIT_NAMES[r.lastSide.suit]}</b> falls back.` : "")
+      ? `${r.last.rank}${suitGlyph(r.last.suit)} flipped: <b>${SUIT_NAMES[r.last.suit]}</b> moves up.` + (r.lastSide ? ` <span class="hr-later">Side card ${r.lastSide.rank}${suitGlyph(r.lastSide.suit)}: <b>${SUIT_NAMES[r.lastSide.suit]}</b> falls back.</span>` : "")
       : "Flip the first card to start the race.";
-    return `${track}<div class="callout race-msg" aria-live="polite">${msg}</div>
-      <button class="btn fire wide" data-act="hr-flip" style="min-height:56px">Flip a card</button>`;
+    return `${track}<div class="hr-side">${draw}<div class="callout race-msg" aria-live="polite">${msg}</div>
+      <div class="legend">${legend}</div>
+      <button class="btn fire wide hr-go" data-act="hr-flip">Flip a card</button></div>`;
   }
   // Done: payouts
   const winners = raceWinners(r), losers = raceLosers(r);
@@ -80,7 +96,8 @@ export function viewRace(r) {
         <div class="stack" style="gap:6px">${losers.map(pid => `<div class="row" style="justify-content:space-between"><span>${esc(player(pid).name)} ${suitGlyph(r.bets[pid].suit)}</span><b>${r.bets[pid].n} ${r.bets[pid].n === 1 ? "sip" : "sips"}</b></div>`).join("")}</div>
         <button class="btn primary wide" data-act="hr-losers" ${r.losersLogged ? "disabled" : ""}>${r.losersLogged ? "Logged" : "Log losers' sips"}</button></section>`
     : "";
-  return `<div class="verdict good" style="font-size:1.5rem">${SUIT_NAMES[r.winner]} wins! ${suitGlyph(r.winner)}</div>
-    ${track}${pay}${loseList}
-    <button class="btn fire wide" data-act="mini-done" style="min-height:56px">${backTxt()}</button>`;
+  return `${track}<div class="hr-side">
+    <div class="hr-win">${draw}<div class="verdict good hr-later">${SUIT_NAMES[r.winner]} wins! ${suitGlyph(r.winner)}</div></div>
+    <div class="hr-later stack">${pay}${loseList}
+    <button class="btn fire wide" data-act="mini-done" style="min-height:56px">${backTxt()}</button></div></div>`;
 }

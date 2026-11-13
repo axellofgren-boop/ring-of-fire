@@ -32,4 +32,14 @@
   .sheet.rv .reveal h2 { font-size: clamp(2rem, 6vh, 3.2rem); }
   .sheet.rv.busy .reveal { width: calc(min(50dvh, 460px) * 5 / 7); }
   .sheet.rv.busy .reveal .face { height: min(50dvh, 460px); }
+
+  /* Horse Race on the TV: bigger horses and cards so the sofa can follow the race. */
+  .wrap.race-on { max-width: 1680px; gap: 16px 48px; padding-block: max(24px, env(safe-area-inset-top, 0px)); }
+  .race-on .track { gap: 6px; padding: 14px; grid-template-columns: 70px repeat(4, minmax(0, 1fr)); }
+  .race-on .horse { font-size: 1.6rem; padding: 6px 14px; border-radius: 10px; }
+  .race-on .tk-side { font-size: 1.2rem; border-radius: 8px; }
+  .race-on .tk-side.tk-finish, .race-on .tk-side.tk-start { font-size: 1rem; }
+  .race-on .race-msg, .race-on .legend { font-size: 1.15rem; }
+  .race-on .hr-win .verdict { font-size: 2.2rem; }
+  .race-on .hr-draw { --card-h: clamp(160px, 30vh, 340px); gap: 32px; }
 }

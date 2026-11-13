@@ -334,7 +334,7 @@ textarea.field { resize: vertical; min-height: 64px; }
 .suitbtn.red-suit { color: var(--suit-red); }
 .suitbtn[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(242,179,61,.45); }
 .suitbtn[aria-pressed="false"] { opacity: .55; }
-.track { display: grid; grid-template-columns: 46px repeat(4, minmax(0, 1fr)); gap: 4px; background: var(--surface); border-radius: 18px; padding: 10px; }
+.track { display: grid; grid-template-columns: 46px repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(var(--rows), minmax(34px, 1fr)); gap: 4px; background: var(--surface); border-radius: 18px; padding: 10px; perspective: 700px; }
 .tk-cell { border-radius: 8px; background: var(--bg); display: grid; place-items: center; min-width: 0; }
 .tk-cell.tk-finish { background: repeating-conic-gradient(var(--fg) 0 25%, var(--surface-2) 0 50%) 0 0 / 10px 10px; }
 .tk-side { border-radius: 6px; display: grid; place-items: center; font-family: var(--f-display); font-size: .8rem; }
@@ -349,7 +349,34 @@ textarea.field { resize: vertical; min-height: 64px; }
 .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; font-size: .88rem; }
 .legend .lg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .race-msg { min-height: 3.2em; }
-.tk-side.flipnew { animation: flip .45s cubic-bezier(.2,.8,.2,1); outline: 2px solid var(--bad); }
+.tk-side.flipnew { outline: 2px solid var(--bad); }
+
+/* Cards that turn over (anim.js): a face and a back, back to back. */
+.flipcard { position: relative; transform-style: preserve-3d; color: var(--ink); }
+.flipcard.red-suit { color: var(--suit-red); }
+.fc-face, .fc-back { position: absolute; inset: 0; border-radius: inherit; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.fc-face { background: var(--card); display: grid; place-items: center; }
+.fc-back { transform: rotateY(180deg); background: repeating-linear-gradient(45deg, #7d1d2a 0 4px, #5c1220 4px 8px); border: 1.5px solid #f6dfb0; }
+.tk-side.flipcard { background: none; }
+.tk-side.flipcard .fc-corner { display: none; }
+
+/* The draw pile: deck on the left, the card just drawn on the right. */
+.hr-draw { --card-h: 116px; display: flex; align-items: center; justify-content: center; gap: 18px; perspective: 900px; }
+.hr-deck { position: relative; height: calc(var(--card-h) * .62); aspect-ratio: 5 / 7; }
+.hr-deck i { position: absolute; inset: 0; border-radius: 7px; background: repeating-linear-gradient(45deg, #7d1d2a 0 4px, #5c1220 4px 8px); border: 1.5px solid #f6dfb0; box-shadow: 0 2px 4px rgba(0,0,0,.4); }
+.hr-deck i:nth-child(2) { transform: translate(-2px, -2px); }
+.hr-deck i:nth-child(3) { transform: translate(-4px, -4px); }
+.hr-drawn { height: var(--card-h); aspect-ratio: 5 / 7; }
+.hr-card, .hr-slot { width: 100%; height: 100%; border-radius: 10px; }
+.hr-card { box-shadow: 0 8px 22px rgba(0,0,0,.5); container-type: inline-size; font-family: var(--f-display); }
+.hr-card .fc-pip { font-size: 34cqw; line-height: 1; }
+.hr-card .fc-corner { position: absolute; left: 7cqw; top: 6cqw; font-size: 15cqw; line-height: 1; text-align: center; }
+.hr-card .fc-corner.br { left: auto; top: auto; right: 7cqw; bottom: 6cqw; transform: rotate(180deg); }
+.hr-slot { border: 2px dashed var(--line); display: grid; place-items: center; color: var(--muted); font-family: var(--f-display); font-size: 2rem; }
+.hr-side { display: grid; gap: 12px; align-content: start; }
+.hr-win { display: grid; gap: 10px; }
+.hr-win .verdict { font-size: 1.5rem; }
+.hr-go { min-height: 56px; }
 /* The Bomb */
 .bomb-stage { display: grid; justify-items: center; gap: 4px; padding: 4px 0 2px; }
 .bomb-svg { width: min(44vw, 180px); height: auto; overflow: visible; filter: drop-shadow(0 12px 22px rgba(0,0,0,.55)); }
@@ -466,6 +493,21 @@ textarea.field { resize: vertical; min-height: 64px; }
   .sheet.rv.busy .alloc-row { padding-block: 3px; }
   .sheet.rv.busy .alloc-row .iconbtn { width: 38px; height: 38px; }
 
+  /* Horse Race: the track fills the left, title, draw pile, news and button stack on the right. */
+  .wrap.race-on {
+    max-width: 1100px; height: 100dvh; min-height: 0;
+    display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(250px, 1fr); grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "track hero" "track side"; gap: 6px 22px;
+    padding-block: max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-bottom, 0px));
+  }
+  .race-on .mini-hero { grid-area: hero; padding-top: 0; }
+  .race-on .mini-hero h1 { font-size: clamp(1.4rem, 7vh, 2.6rem); }
+  .race-on .hr-track { grid-area: track; min-height: 0; display: grid; }
+  .race-on .track { grid-template-rows: repeat(var(--rows), minmax(0, 1fr)); gap: 3px; padding: 8px; }
+  .race-on .hr-side { grid-area: side; min-height: 0; overflow-y: auto; align-content: start; gap: 8px; }
+  .race-on .hr-draw { --card-h: clamp(84px, 30vh, 260px); }
+  .race-on .race-msg { min-height: 0; padding: 8px 12px; }
+
   .boom-layout { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); align-items: center; min-height: calc(100dvh - 40px); }
   .boom-svg { width: min(38vw, 70dvh, 360px); }
 }
@@ -473,6 +515,12 @@ textarea.field { resize: vertical; min-height: 64px; }
    Short screen: everything in landscape.css is already sized for it. Tweaks for very small phones go here. */
 @media (orientation: landscape) and (max-height: 600px) {
   .wrap.game { column-gap: clamp(12px, 3vw, 28px); }
+  .race-on .horse { font-size: .8rem; padding: 2px 6px; }
+  .race-on .tk-side { font-size: .7rem; }
+  .race-on .track { grid-template-columns: 38px repeat(4, minmax(0, 1fr)); }
+  .race-on .race-msg { font-size: .88rem; }
+  .race-on .legend { font-size: .8rem; gap: 2px 10px; }
+  .race-on .hr-go { min-height: 48px; }
 }
 /* ---------- Laptop, desktop and TV ----------
    Lots of room: a big ring on the left, and a roomier turn panel and role tiles centred beside it. */
@@ -508,6 +556,16 @@ textarea.field { resize: vertical; min-height: 64px; }
   .sheet.rv .reveal h2 { font-size: clamp(2rem, 6vh, 3.2rem); }
   .sheet.rv.busy .reveal { width: calc(min(50dvh, 460px) * 5 / 7); }
   .sheet.rv.busy .reveal .face { height: min(50dvh, 460px); }
+
+  /* Horse Race on the TV: bigger horses and cards so the sofa can follow the race. */
+  .wrap.race-on { max-width: 1680px; gap: 16px 48px; padding-block: max(24px, env(safe-area-inset-top, 0px)); }
+  .race-on .track { gap: 6px; padding: 14px; grid-template-columns: 70px repeat(4, minmax(0, 1fr)); }
+  .race-on .horse { font-size: 1.6rem; padding: 6px 14px; border-radius: 10px; }
+  .race-on .tk-side { font-size: 1.2rem; border-radius: 8px; }
+  .race-on .tk-side.tk-finish, .race-on .tk-side.tk-start { font-size: 1rem; }
+  .race-on .race-msg, .race-on .legend { font-size: 1.15rem; }
+  .race-on .hr-win .verdict { font-size: 2.2rem; }
+  .race-on .hr-draw { --card-h: clamp(160px, 30vh, 340px); gap: 32px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before { animation: none !important; transition: none !important; }
@@ -741,6 +799,81 @@ function flash() {
   const f = document.createElement("div"); f.className = "flash"; document.body.appendChild(f); setTimeout(() => f.remove(), 750);
 }
 
+// ===== minigames/horse-race/anim.js =====
+// ---------- Horse Race: playing out one draw ----------
+// The logic moves the horses in one go. This plays it back in order, so the table can follow it on the TV:
+//   1. the top card lifts off the deck, turns over and lands face up beside it;
+//   2. the matching horse gallops up a row;
+//   3. if the leader reached a new side card, that card turns over and its horse drops back a row;
+//   4. on the winning draw, "X wins!" and the payouts appear once the horse is over the line.
+// Only transform and opacity are animated, so it stays smooth on the TV. With reduced motion the sounds still play
+// but everything is shown straight away.
+const HR_MS = { card: 560, horse: 420, pause: 160, side: 420, back: 380 };
+let hrSeen = null; // { r, n }: the last draw already shown, so a redraw (cog, rotate) doesn't replay it
+
+// Called after every redraw of the Horse Race screen. Returns true if it took over the horse movement.
+function playRaceDraw(r, before) {
+  const n = r.draws || 0;
+  const fresh = !!hrSeen && hrSeen.r === r && n > hrSeen.n;
+  hrSeen = { r, n };
+  if (!fresh || !r.last) return false;
+  const tHorse = HR_MS.card, tSide = tHorse + HR_MS.horse + HR_MS.pause, tBack = tSide + HR_MS.side;
+  const tEnd = r.lastSide ? tBack + HR_MS.back : tHorse + HR_MS.horse;
+  const won = r.phase === "done";
+  const later = (ms, f) => setTimeout(f, reduceMotion() ? 0 : ms);
+  SFX.play("flip"); buzz(15);
+  later(tHorse, () => SFX.play("gallop"));
+  if (r.lastSide) later(tSide, () => { SFX.play("back"); buzz(40); });
+  if (won) later(tEnd, () => { SFX.play("win"); confetti(); buzz([40, 60, 40]); });
+  if (reduceMotion()) return true;
+
+  flyCard(document.querySelector(".hr-card"), document.querySelector(".hr-deck"));
+  const side = document.querySelector(".tk-side.flipnew");
+  if (side) side.animate([{ transform: "rotateY(180deg)" }, { transform: "rotateY(180deg)", offset: tSide / (tSide + HR_MS.side) }, { transform: "none" }],
+    { duration: tSide + HR_MS.side, easing: "ease-in-out" });
+
+  // Horses: each one waits for its moment, so the moved one goes after the card lands, the one sent back after its side card.
+  const pitch = rowPitch();
+  document.querySelectorAll("[data-flip]").forEach(el => {
+    const old = before[el.dataset.flip]; if (!old) return;
+    const now = el.getBoundingClientRect(), dx = old.left - now.left, dy = old.top - now.top;
+    const si = +el.dataset.flip.split("-")[1], up = r.last.suit === si, back = r.lastSide && r.lastSide.suit === si;
+    const at = (t, x, y, lift) => ({ offset: t / tEnd, transform: `translate(${x}px, ${y}px)${lift ? " scale(1.18)" : ""}` });
+    let frames;
+    if (up && back) frames = [at(0, dx, dy), at(tHorse, dx, dy), at(tHorse + HR_MS.horse / 2, dx, dy - pitch / 2, true), at(tHorse + HR_MS.horse, dx, dy - pitch), at(tBack, dx, dy - pitch), at(tEnd, 0, 0)];
+    else if (up) frames = [at(0, dx, dy), at(tHorse, dx, dy), at(tHorse + HR_MS.horse / 2, dx / 2, dy / 2, true), at(tHorse + HR_MS.horse, 0, 0)];
+    else if (back) frames = [at(0, dx, dy), at(tBack, dx, dy), at(tEnd, 0, 0)];
+    else if (Math.abs(dx) + Math.abs(dy) >= 1) frames = [at(0, dx, dy), at(Math.min(380, tEnd), 0, 0)];
+    else return;
+    if (frames[frames.length - 1].offset < 1) frames.push({ offset: 1, transform: "none" });
+    el.animate(frames, { duration: tEnd, easing: "cubic-bezier(.3,.7,.3,1)" });
+  });
+  // Hold back what the draw reveals (side card note, the winner, payouts) until it happens on the track.
+  document.querySelectorAll(".hr-later").forEach((el, i) => el.animate(
+    [{ opacity: 0, transform: "translateY(8px) scale(.96)" }, { opacity: 1, transform: "none" }],
+    { duration: 320, delay: (won ? tEnd : tSide) + i * 120, fill: "backwards", easing: "cubic-bezier(.2,.8,.2,1.2)" }));
+  return true;
+}
+
+// The drawn card starts face down on top of the deck, lifts, turns over in the air and lands in its slot.
+function flyCard(card, deck) {
+  if (!card || !deck) return;
+  const a = deck.getBoundingClientRect(), b = card.getBoundingClientRect();
+  const dx = a.left + a.width / 2 - (b.left + b.width / 2), dy = a.top + a.height / 2 - (b.top + b.height / 2), s = a.height / b.height;
+  card.animate([
+    { transform: `translate(${dx}px, ${dy}px) scale(${s}) rotateY(180deg)` },
+    { transform: `translate(${dx / 2}px, ${dy / 2 - b.height * 0.25}px) scale(${(s + 1.15) / 2}) rotateY(180deg) rotateZ(-6deg)`, offset: 0.35 },
+    { transform: "translate(0, -6px) scale(1.12) rotateY(0deg) rotateZ(3deg)", offset: 0.8 },
+    { transform: "none" }
+  ], { duration: HR_MS.card, easing: "cubic-bezier(.25,.75,.35,1)" });
+}
+
+// Distance between two rows of the track, for the horse that goes up and straight back down.
+function rowPitch() {
+  const sides = document.querySelectorAll(".track .tk-side");
+  return sides.length > 1 ? sides[1].getBoundingClientRect().top - sides[0].getBoundingClientRect().top : 40;
+}
+
 // ===== minigames/bomb/logic.js =====
 // ---------- The Bomb ----------
 // Played off screen: a random player starts, the bomb goes round the table by hand, and a hidden timer (20s to 90s) decides when it blows.
@@ -853,7 +986,7 @@ const SUIT_NAMES = ["Spades", "Hearts", "Diamonds", "Clubs"];
 function newRace() {
   const bets = {};
   S.game.order.forEach(pid => { bets[pid] = { suit: null, n: 2 }; });
-  return { phase: "bets", len: 7, pre: false, bets, pos: [0, 0, 0, 0], side: [], sideUp: 0, deck: [], last: null, lastSide: null, winner: null, payIdx: 0, alloc: {}, losersLogged: false };
+  return { phase: "bets", len: 7, pre: false, bets, pos: [0, 0, 0, 0], side: [], sideUp: 0, deck: [], draws: 0, last: null, lastSide: null, winner: null, payIdx: 0, alloc: {}, losersLogged: false };
 }
 function raceDeck() {
   const d = [];
@@ -880,10 +1013,11 @@ function raceAct(act, data) {
   if (act === "hr-flip" && r.phase === "race") {
     if (!r.deck.length) r.deck = raceDeck();
     const c = r.deck.pop();
+    // The screen plays the draw (card, gallop, side card, win) from r.draws, r.last and r.lastSide: see anim.js.
+    r.draws = (r.draws || 0) + 1;
     r.last = c; r.lastSide = null;
     r.pos[c.suit] += 1;
-    fx.sound("gallop");
-    if (r.pos[c.suit] > r.len) { fx.sound("win"); setTimeout(fx.confetti, 300); r.winner = c.suit; r.phase = "done"; ev("race", { suit: c.suit, winners: raceWinners(r), losers: raceLosers(r) }); return; }
+    if (r.pos[c.suit] > r.len) { r.winner = c.suit; r.phase = "done"; ev("race", { suit: c.suit, winners: raceWinners(r), losers: raceLosers(r) }); return; }
     // When the leading horse reaches the next side card, flip it: that suit steps back.
     const lead = Math.max(...r.pos);
     if (r.sideUp < lead && r.sideUp < r.len) {
@@ -891,7 +1025,6 @@ function raceAct(act, data) {
       r.sideUp += 1;
       r.pos[s.suit] = Math.max(0, r.pos[s.suit] - 1);
       r.lastSide = s;
-      fx.sound("back");
     }
   }
   if (act === "hr-alloc") {
@@ -1758,6 +1891,13 @@ function viewDoor(d) {
 }
 
 // ===== minigames/horse-race/view.js =====
+// A playing card that can turn over: the face, and the back that shows while anim.js flips it.
+function raceCard(c, cls) {
+  const red = SUITS[c.suit].red ? "red-suit" : "", s = SUITS[c.suit].s;
+  return `<div class="flipcard ${cls} ${red}" aria-label="${c.rank} of ${SUIT_NAMES[c.suit]}">
+    <div class="fc-face"><span class="fc-corner">${c.rank}<br>${s}</span><span class="fc-pip">${c.rank}${s}</span><span class="fc-corner br">${c.rank}<br>${s}</span></div>
+    <div class="fc-back"></div></div>`;
+}
 function suitGlyph(si) { return `<span class="${SUITS[si].red ? "red-suit" : ""}">${SUITS[si].s}</span>`; }
 
 function viewRace(r) {
@@ -1793,8 +1933,11 @@ function viewRace(r) {
   const horse = si => `<div class="horse ${SUITS[si].red ? "red-suit" : ""} ${r.last && r.last.suit === si ? "moved" : ""}" data-flip="horse-${si}">A${SUITS[si].s}</div>`;
   let rows = `<div class="tk-side tk-finish">FIN</div>${[0, 1, 2, 3].map(si => `<div class="tk-cell tk-finish">${r.winner === si ? horse(si) : ""}</div>`).join("")}`;
   for (let k = r.len; k >= 0; k--) {
+    const sc = r.side[k - 1];
     const side = k === 0 ? `<div class="tk-side tk-start">GO</div>`
-      : k <= r.sideUp ? `<div class="tk-side up ${SUITS[r.side[k - 1].suit].red ? "red-suit" : ""} ${r.lastSide && k === r.sideUp ? "flipnew" : ""}">${r.side[k - 1].rank}${SUITS[r.side[k - 1].suit].s}</div>`
+      : k <= r.sideUp ? (r.lastSide && k === r.sideUp
+        ? raceCard(sc, "tk-side flipnew")
+        : `<div class="tk-side up ${SUITS[sc.suit].red ? "red-suit" : ""}">${sc.rank}${SUITS[sc.suit].s}</div>`)
       : `<div class="tk-side down"></div>`;
     rows += side + [0, 1, 2, 3].map(si => {
       const here = r.winner !== si && r.pos[si] === k;
@@ -1803,13 +1946,19 @@ function viewRace(r) {
   }
   const backers = si => g.order.filter(pid => r.bets[pid].suit === si).map(pid => esc(player(pid).name)).join(", ") || "nobody";
   const legend = [0, 1, 2, 3].map(si => `<div class="lg">${suitGlyph(si)} <span>${backers(si)}</span></div>`).join("");
-  const track = `<div class="track" style="grid-template-rows:repeat(${r.len + 2}, minmax(34px, 1fr))">${rows}</div><div class="legend">${legend}</div>`;
+  const track = `<div class="hr-track"><div class="track" style="--rows:${r.len + 2}">${rows}</div></div>`;
+  // The draw pile: the deck, and the card just drawn beside it (anim.js flies it over from the deck).
+  const draw = `<div class="hr-draw">
+      <div class="hr-deck" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="hr-drawn">${r.last ? raceCard(r.last, "hr-card") : `<div class="hr-slot" aria-hidden="true">?</div>`}</div>
+    </div>`;
   if (r.phase === "race") {
     const msg = r.last
-      ? `${r.last.rank}${suitGlyph(r.last.suit)} flipped: <b>${SUIT_NAMES[r.last.suit]}</b> moves up.` + (r.lastSide ? ` Side card ${r.lastSide.rank}${suitGlyph(r.lastSide.suit)}: <b>${SUIT_NAMES[r.lastSide.suit]}</b> falls back.` : "")
+      ? `${r.last.rank}${suitGlyph(r.last.suit)} flipped: <b>${SUIT_NAMES[r.last.suit]}</b> moves up.` + (r.lastSide ? ` <span class="hr-later">Side card ${r.lastSide.rank}${suitGlyph(r.lastSide.suit)}: <b>${SUIT_NAMES[r.lastSide.suit]}</b> falls back.</span>` : "")
       : "Flip the first card to start the race.";
-    return `${track}<div class="callout race-msg" aria-live="polite">${msg}</div>
-      <button class="btn fire wide" data-act="hr-flip" style="min-height:56px">Flip a card</button>`;
+    return `${track}<div class="hr-side">${draw}<div class="callout race-msg" aria-live="polite">${msg}</div>
+      <div class="legend">${legend}</div>
+      <button class="btn fire wide hr-go" data-act="hr-flip">Flip a card</button></div>`;
   }
   // Done: payouts
   const winners = raceWinners(r), losers = raceLosers(r);
@@ -1833,9 +1982,10 @@ function viewRace(r) {
         <div class="stack" style="gap:6px">${losers.map(pid => `<div class="row" style="justify-content:space-between"><span>${esc(player(pid).name)} ${suitGlyph(r.bets[pid].suit)}</span><b>${r.bets[pid].n} ${r.bets[pid].n === 1 ? "sip" : "sips"}</b></div>`).join("")}</div>
         <button class="btn primary wide" data-act="hr-losers" ${r.losersLogged ? "disabled" : ""}>${r.losersLogged ? "Logged" : "Log losers' sips"}</button></section>`
     : "";
-  return `<div class="verdict good" style="font-size:1.5rem">${SUIT_NAMES[r.winner]} wins! ${suitGlyph(r.winner)}</div>
-    ${track}${pay}${loseList}
-    <button class="btn fire wide" data-act="mini-done" style="min-height:56px">${backTxt()}</button>`;
+  return `${track}<div class="hr-side">
+    <div class="hr-win">${draw}<div class="verdict good hr-later">${SUIT_NAMES[r.winner]} wins! ${suitGlyph(r.winner)}</div></div>
+    <div class="hr-later stack">${pay}${loseList}
+    <button class="btn fire wide" data-act="mini-done" style="min-height:56px">${backTxt()}</button></div></div>`;
 }
 
 // ===== minigames/impostor/view.js =====
@@ -1909,7 +2059,7 @@ function viewMini() {
   if (name === "The Impostor" && S.game.imp) return viewImpostor(S.game.imp);
   const r = S.game.race;
   if (name === "The Bomb" && S.game.bomb) return viewBomb(S.game.bomb);
-  if (name === "Horse Race" && r) return `<div class="wrap">
+  if (name === "Horse Race" && r) return `<div class="wrap race ${r.phase === "bets" ? "" : "race-on"}">
     <div class="mini-hero" style="padding-top:8px;gap:4px">
       <span class="label">${miniTag()}</span>
       <h1>Horse Race</h1>
@@ -2082,7 +2232,8 @@ function render() {
   if (scr === "mini") html += `<button class="iconbtn cog solo-cog" data-act="menu" aria-label="Scores and settings">&#9881;&#65038;</button>`;
   app.innerHTML = html + viewSheet();
   if (scr === "game") layoutRing();
-  flipAnimate(before);
+  // A fresh Horse Race draw plays out step by step; anything else just slides into place.
+  if (!(scr === "mini" && S.game.race && playRaceDraw(S.game.race, before))) flipAnimate(before);
 }
 
 // ===== ui/wakelock.js =====

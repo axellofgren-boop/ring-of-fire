@@ -11,7 +11,7 @@ export const SUIT_NAMES = ["Spades", "Hearts", "Diamonds", "Clubs"];
 export function newRace() {
   const bets = {};
   S.game.order.forEach(pid => { bets[pid] = { suit: null, n: 2 }; });
-  return { phase: "bets", len: 7, pre: false, bets, pos: [0, 0, 0, 0], side: [], sideUp: 0, deck: [], last: null, lastSide: null, winner: null, payIdx: 0, alloc: {}, losersLogged: false };
+  return { phase: "bets", len: 7, pre: false, bets, pos: [0, 0, 0, 0], side: [], sideUp: 0, deck: [], draws: 0, last: null, lastSide: null, winner: null, payIdx: 0, alloc: {}, losersLogged: false };
 }
 export function raceDeck() {
   const d = [];
@@ -38,10 +38,11 @@ export function raceAct(act, data) {
   if (act === "hr-flip" && r.phase === "race") {
     if (!r.deck.length) r.deck = raceDeck();
     const c = r.deck.pop();
+    // The screen plays the draw (card, gallop, side card, win) from r.draws, r.last and r.lastSide: see anim.js.
+    r.draws = (r.draws || 0) + 1;
     r.last = c; r.lastSide = null;
     r.pos[c.suit] += 1;
-    fx.sound("gallop");
-    if (r.pos[c.suit] > r.len) { fx.sound("win"); setTimeout(fx.confetti, 300); r.winner = c.suit; r.phase = "done"; ev("race", { suit: c.suit, winners: raceWinners(r), losers: raceLosers(r) }); return; }
+    if (r.pos[c.suit] > r.len) { r.winner = c.suit; r.phase = "done"; ev("race", { suit: c.suit, winners: raceWinners(r), losers: raceLosers(r) }); return; }
     // When the leading horse reaches the next side card, flip it: that suit steps back.
     const lead = Math.max(...r.pos);
     if (r.sideUp < lead && r.sideUp < r.len) {
@@ -49,7 +50,6 @@ export function raceAct(act, data) {
       r.sideUp += 1;
       r.pos[s.suit] = Math.max(0, r.pos[s.suit] - 1);
       r.lastSide = s;
-      fx.sound("back");
     }
   }
   if (act === "hr-alloc") {

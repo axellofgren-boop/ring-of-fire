@@ -19,7 +19,7 @@ export function viewMini() {
   if (name === "The Impostor" && S.game.imp) return viewImpostor(S.game.imp);
   const r = S.game.race;
   if (name === "The Bomb" && S.game.bomb) return viewBomb(S.game.bomb);
-  if (name === "Horse Race" && r) return `<div class="wrap">
+  if (name === "Horse Race" && r) return `<div class="wrap race ${r.phase === "bets" ? "" : "race-on"}">
     <div class="mini-hero" style="padding-top:8px;gap:4px">
       <span class="label">${miniTag()}</span>
       <h1>Horse Race</h1>

@@ -9,7 +9,7 @@ import { bombAct } from "../minigames/bomb/logic.js";
 import { doorAct } from "../minigames/door/logic.js";
 import { raceAct } from "../minigames/horse-race/logic.js";
 import { impostorAct } from "../minigames/impostor/logic.js";
-import { confetti, toastSince } from "./effects.js";
+import { confetti, ringSpot, toastSince } from "./effects.js";
 import { $, app, render } from "./render.js";
 import { buzz, reduceMotion, SFX } from "./sound.js";
 import { wakeLock } from "./wakelock.js";
@@ -59,6 +59,7 @@ app.addEventListener("click", e => {
     case "draw": {
       if (ui.pulling) return;
       SFX.play("flip"); buzz(15);
+      ui.drawFrom = ringSpot(el);
       if (reduceMotion()) { drawCard(+id); return; }
       ui.pulling = true;
       el.classList.add("pulling");
@@ -70,7 +71,7 @@ app.addEventListener("click", e => {
     case "half-pick": g.half.pick = g.half.pick === el.dataset.k ? null : el.dataset.k; break;
     case "half-ok": punishLast(); return;
     case "half-skip": finishHalf(); return;
-    case "random": { const left = g.deck.filter(c => !c.drawn); if (left.length) drawCard(left[Math.floor(Math.random() * left.length)].id); return; }
+    case "random": { const left = g.deck.filter(c => !c.drawn); if (left.length) { const c = left[Math.floor(Math.random() * left.length)]; ui.drawFrom = ringSpot(app.querySelector(`.rc[data-id="${c.id}"]`)); drawCard(c.id); } return; }
     case "alloc": { const d = +el.dataset.d; const used = Object.values(sh.alloc).reduce((a, b) => a + b, 0);
       const v = (sh.alloc[id] || 0) + d; if (v >= 0 && (d < 0 || used < sh.n)) sh.alloc[id] = v; if (!sh.alloc[id]) delete sh.alloc[id]; break; }
     case "pick": sh.picked[id] = !sh.picked[id]; break;

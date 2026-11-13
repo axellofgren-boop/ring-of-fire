@@ -73,3 +73,25 @@ export function flash() {
   if (reduceMotion()) return;
   const f = document.createElement("div"); f.className = "flash"; document.body.appendChild(f); setTimeout(() => f.remove(), 750);
 }
+
+// Where a ring card sits on screen (centre, height, tilt), so the big card can fly out from there.
+export function ringSpot(el) {
+  if (!el || reduceMotion()) return null;
+  const b = el.getBoundingClientRect(), a = el.style.transform.match(/rotate\(([-\d.]+)deg\)/);
+  return { x: b.left + b.width / 2, y: b.top + b.height / 2, h: el.offsetHeight, a: a ? +a[1] : 0 };
+}
+// The drawn card leaves the ring face down, grows as it flies to the middle and turns over on the way.
+export function flyFromRing(from) {
+  const face = document.querySelector(".scrim.anim .face");
+  if (!from || !face || reduceMotion()) return;
+  const b = face.getBoundingClientRect();
+  const dx = from.x - (b.left + b.width / 2), dy = from.y - (b.top + b.height / 2), s = from.h / b.height;
+  const tilt = ((from.a % 360) + 540) % 360 - 180; // shortest way back to upright
+  face.classList.add("flying");
+  face.animate([
+    { transform: `translate(${dx}px, ${dy}px) rotate(${tilt}deg) scale(${s}) rotateY(180deg)` },
+    { transform: `translate(${dx * 0.4}px, ${dy * 0.4 - 30}px) rotate(${tilt * 0.3}deg) scale(${(s + 1) / 2}) rotateY(150deg)`, offset: 0.4 },
+    { transform: "translate(0, -10px) scale(1.06) rotateY(0deg)", offset: 0.82 },
+    { transform: "none" }
+  ], { duration: 620, easing: "cubic-bezier(.3,.7,.3,1)" }).onfinish = () => face.classList.remove("flying");
+}

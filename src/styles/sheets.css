@@ -25,6 +25,9 @@
   font-family: var(--f-display);
 }
 @keyframes flip { from { transform: perspective(600px) rotateY(90deg) scale(.9); } }
+/* While the card flies out of the ring (flyFromRing), its back covers the face until it turns over. */
+.face.flying::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: repeating-linear-gradient(45deg, #7d1d2a 0 4px, #5c1220 4px 8px); border: 2px solid #f6dfb0; animation: backside .62s steps(1, end) forwards; }
+@keyframes backside { 0% { opacity: 1; } 58% { opacity: 0; } 100% { opacity: 0; } }
 .face.red { color: var(--suit-red); }
 .face .corner { position: absolute; left: 6cqw; top: 5cqw; line-height: 1; font-size: 15cqw; text-align: center; }
 .face .corner.br { left: auto; top: auto; right: 6cqw; bottom: 5cqw; transform: rotate(180deg); }
